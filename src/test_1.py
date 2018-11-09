@@ -2,11 +2,13 @@
 # -*- conding:utf8 -*-
 
 from numpy import array
+import math
 
 import rospy
+import tf
 
 from geometry_msgs.msg import PoseWithCovarianceStamped
-from nav_msgs.msg      import Odometry
+from      nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
 from  morse_helper.msg import PedestrianData
 
@@ -29,15 +31,13 @@ class Naito_node:
 
         self._val = 0
         self._positions = {
-            "robot":{"x":0,"y":0},
+            "robot":{"x":0,"y":0,"a":0},
             "woman":{"x":0,"y":0},
             "enemy":{"x":0,"y":0},
         }
-        self._goal = {"x":0,"y":0}
+        self._goal = {"x":0,"y":0,"a":0}
 
         self._next_vel = Twist()
-
-
 
         r = rospy.Rate(10)
 
@@ -46,18 +46,17 @@ class Naito_node:
             # self._goal["x"] = -15.0
             # self._goal["y"] =  60.0
 
-
             # self._goal["x"] = (self._positions["woman"]["x"]+self._positions["enemy"]["x"])/2
             # self._goal["y"] = (self._positions["woman"]["y"]+self._positions["enemy"]["y"])/2
 
-            print("goal ({x:.2f},{y:.2f})".format(x=self._goal["x"],y=self._goal["y"]) )
+            print("goal ({x:.2f},{y:.2f},{a:.2f})".format(x=self._goal["x"],y=self._goal["y"],a=self._goal["a"]) )
 
             self._set_next_vel()
             self._pub.publish(self._next_vel)
 
-            print("robot({x:.2f},{y:.2f})".format(x=self._positions["robot"]["x"],y=self._positions["robot"]["y"]) )
-            print("woman({x:.2f},{y:.2f})".format(x=self._positions["woman"]["x"],y=self._positions["woman"]["y"]) )
-            print("enemy({x:.2f},{y:.2f})".format(x=self._positions["enemy"]["x"],y=self._positions["enemy"]["y"]) )
+            print("robot({x:.2f},{y:.2f},{a:.2f})".format(x=self._positions["robot"]["x"],y=self._positions["robot"]["y"], a=self._positions["robot"]["a"]) )
+            # print("woman({x:.2f},{y:.2f})".format(x=self._positions["woman"]["x"],y=self._positions["woman"]["y"]) )
+            # print("enemy({x:.2f},{y:.2f})".format(x=self._positions["enemy"]["x"],y=self._positions["enemy"]["y"]) )
             print("\n")
 
             r.sleep()
@@ -66,54 +65,71 @@ class Naito_node:
         self._positions["robot"]["x"] = data.pose.pose.position.x
         self._positions["robot"]["y"] = data.pose.pose.position.y
 
+        euler = tf.transformations.euler_from_quaternion((
+            data.pose.pose.orientation.x,
+            data.pose.pose.orientation.y,
+            data.pose.pose.orientation.z,
+            data.pose.pose.orientation.w
+        ))
+        self._positions["robot"]["a"] = euler[2]
+
     def _pedes_callback(self,data):
         for odom in data.odoms:
-            if odom.child_frame_id == "Dummy1":
-                self._positions["woman"]["x"] =  odom.pose.pose.position.x
-                self._positions["woman"]["y"] =  odom.pose.pose.position.y
+            if (odom.child_frame_id == "Dummy1" or odom.child_frame_id == "Pedestrian_female 42"):
+                self._positions["woman"]["x"] = odom.pose.pose.position.x
+                self._positions["woman"]["y"] = odom.pose.pose.position.y
+            if (odom.child_frame_id == "Scripted Human" or odom.child_frame_id == "Pedestrian_male 02"):
+                self._positions["enemy"]["x"] = odom.pose.pose.position.x
+                self._positions["enemy"]["y"] = odom.pose.pose.position.y
+        self._set_goal()
 
-                self._goal["x"] = self._positions["woman"]["x"]
-                self._goal["y"] = self._positions["woman"]["y"]
-
-
-            if odom.child_frame_id == "Scripted Human":
-                self._positions["enemy"]["x"] =  odom.pose.pose.position.x
-                self._positions["enemy"]["y"] =  odom.pose.pose.position.y
+    def _set_goal(self):
+        self._goal["x"] = self._positions["woman"]["x"]
+        self._goal["y"] = self._positions["woman"]["y"]
 
     def _set_next_vel(self):
-        gap_x = self._goal["x"] - self._positions["robot"]["x"]
-        gap_y = self._goal["y"] - self._positions["robot"]["y"]
+        to_x = self._goal["x"] - self._positions["robot"]["x"]
+        to_y = self._goal["y"] - self._positions["robot"]["y"]
+        self._goal["a"] = math.atan2(to_x,to_y)
+        to_a = self._goal["a"]
 
-        gap = gap_x*gap_x + gap_y*gap_y
-        print("gap :({gap_x:.2f},{gap_y:.2f})={gap:.2f}".format(gap_x=gap_x,gap_y=gap_y,gap=gap))
+        gap = to_x*to_x + to_y*to_y
 
-        gap_x /= 10
-        gap_y /= 10
+        print("gap :({to_x:.2f},{to_y:.2f})={gap:.2f}".format(to_x=to_x,to_y=to_y,gap=gap))
 
-        # if(gap_x >= 0):
-        #     gap_x = max(MIN_SPEED, gap_x)
-        #     gap_x = min(MAX_SPEED, gap_x)
+        to_x /= 10
+        to_y /= 10
+
+        # if(to_x >= 0):
+        #     to_x = max(MIN_SPEED, to_x)
+        #     to_x = min(MAX_SPEED, to_x)
         # else:
-        #     gap_x = min(MIN_SPEED*(-1), gap_x)
-        #     gap_x = max(MAX_SPEED*(-1), gap_x)
+        #     to_x = min(MIN_SPEED*(-1), to_x)
+        #     to_x = max(MAX_SPEED*(-1), to_x)
         #
-        # if(gap_y >= 0):
-        #     gap_y = max(MIN_SPEED, gap_y)
-        #     gap_y = min(MAX_SPEED, gap_y)
+        # if(to_y >= 0):
+        #     to_y = max(MIN_SPEED, to_y)
+        #     to_y = min(MAX_SPEED, to_y)
         # else:
-        #     gap_y = min(MIN_SPEED*(-1), gap_y)
-        #     gap_y = max(MAX_SPEED*(-1), gap_y)
+        #     to_y = min(MIN_SPEED*(-1), to_y)
+        #     to_y = max(MAX_SPEED*(-1), to_y)
 
-        if(self._val<100 || gap < NEAR_DIS) :
-            gap_x = 0
-            gap_y = 0
+        if(self._val < 30 or gap < NEAR_DIS) :
+            to_x = 0
+            to_y = 0
+            self._val += 1
+            # print("val :{val:d}".format(val=self._val))
 
-        print("val :"+self._val)
-        print("vel :({x:.2f},{y:.2f})".format(x=self._next_vel.linear.x,y=self._next_vel.linear.y))
+        # print("vel :({x:.2f},{y:.2f})".format(x=to_x,y=to_y))
+        # self._next_vel.linear.x = to_x
+        # self._next_vel.linear.y = to_y
 
-        self._next_vel.linear.x = gap_x
-        self._next_vel.linear.y = gap_y
-        #self._next_vel.angular.z = 0.2
+        gap_a = to_a - self._positions["robot"]["a"]
+
+        if(gap_a * gap_a < 0.03):
+            self._next_vel.angular.z = 0.0
+        else:
+            self._next_vel.angular.z = 0.4
 
 
 
@@ -123,4 +139,5 @@ class Naito_node:
 
 
 if __name__ == "__main__":
+    #help(tf.transformations)
     naito = Naito_node()
