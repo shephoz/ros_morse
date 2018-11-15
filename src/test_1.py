@@ -7,6 +7,9 @@ import math
 import rospy
 import tf
 
+from geometry_msgs.msg import Point
+from geometry_msgs.msg import PoseStamped
+
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from      nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
@@ -14,56 +17,75 @@ from  morse_helper.msg import PedestrianData
 
 M_PI = 3.14
 NEAR_ROT  = M_PI / 12
-NEAR_DIS  = 1.0
-MAX_SPEED = 2.0
-MIN_SPEED = 0.1
+NEAR_DIS  = 0.4
+
+SPD_ANG = M_PI / 1
+SPD_LIN = 0.8
+
+RATE = 0.3
 
 class Naito_node:
 
     def __init__(self):
         rospy.init_node('naito',anonymous=True)
-        self._pub = rospy.Publisher('/xbot/cmd_vel', Twist, queue_size=1)
+        self._vel_pub = rospy.Publisher('/xbot/cmd_vel', Twist, queue_size=1)
+        
+        self._goal_pub  = rospy.Publisher('/naito/goal',  PoseStamped, queue_size=10)
+        self._woman_pub = rospy.Publisher('/naito/woman', PoseStamped, queue_size=10)
+        self._enemy_pub = rospy.Publisher('/naito/enemy', PoseStamped, queue_size=10)
+        
         if(False):
-            rospy.Subscriber('/pose_6d',  PoseWithCovarianceStamped, self._robot_callback)
+            rospy.Subscriber('/pose_6d', PoseWithCovarianceStamped, self._robot_callback)
         else:
-            rospy.Subscriber('/xbot/odom',  Odometry, self._robot_callback)
+            rospy.Subscriber('/xbot/odom', Odometry, self._robot_callback)
+        
         rospy.Subscriber('/pedestrians', PedestrianData, self._pedes_callback)
 
-        self._val = 0
+        self._phase = 0
+        self._reached = False
+        
         self._positions = {
-            "robot":{"x":0,"y":0,"a":0},
-            "woman":{"x":0,"y":0},
-            "enemy":{"x":0,"y":0},
+            "robot":Point(),
+            "woman":Point(),
+            "enemy":Point(),
         }
-        self._goal = {"x":0,"y":0,"a":0}
-
+        
+        self._goal = Point()
+        self._goal_cache = Point()
         self._next_vel = Twist()
 
-        r = rospy.Rate(10)
+        r = rospy.Rate(30)
 
-        while True:
-
-            # self._goal["x"] = -15.0
-            # self._goal["y"] =  60.0
-
-            # self._goal["x"] = (self._positions["woman"]["x"]+self._positions["enemy"]["x"])/2
-            # self._goal["y"] = (self._positions["woman"]["y"]+self._positions["enemy"]["y"])/2
-
-            print("goal ({x:.2f},{y:.2f},{a:.2f})".format(x=self._goal["x"],y=self._goal["y"],a=self._goal["a"]) )
+        while not rospy.is_shutdown():
 
             self._set_next_vel()
-            self._pub.publish(self._next_vel)
+            self._vel_pub.publish(self._next_vel)
+            
+            # print("robot({a:.2f})".format(a=self._positions["robot"].z))
+            # print("robot({x:.2f},{y:.2f},{a:.2f})".format(x=self._positions["robot"].x,y=self._positions["robot"].y, a=self._positions["robot"].z) )
+            # print("woman({x:.2f},{y:.2f})".format(x=self._positions["woman"].x,y=self._positions["woman"].y) )
+            # print("enemy({x:.2f},{y:.2f})".format(x=self._positions["enemy"].x,y=self._positions["enemy"].y) )
+            # print("\n")
+            
+            try:
+                r.sleep()
+            except:
+                print("time error!")
 
-            print("robot({x:.2f},{y:.2f},{a:.2f})".format(x=self._positions["robot"]["x"],y=self._positions["robot"]["y"], a=self._positions["robot"]["a"]) )
-            # print("woman({x:.2f},{y:.2f})".format(x=self._positions["woman"]["x"],y=self._positions["woman"]["y"]) )
-            # print("enemy({x:.2f},{y:.2f})".format(x=self._positions["enemy"]["x"],y=self._positions["enemy"]["y"]) )
-            print("\n")
-
-            r.sleep()
+    def _make_point_pub(self,point):
+        goal = PoseStamped()
+        goal.header.frame_id = "map"
+        goal.pose.position.x  = point.x
+        goal.pose.position.y  = point.y
+        quaternion = tf.transformations.quaternion_from_euler(0,0,point.z)
+        goal.pose.orientation.z = quaternion[2]
+        goal.pose.orientation.w = quaternion[3]
+        # print(goal)
+        return goal
 
     def _robot_callback(self,data):
-        self._positions["robot"]["x"] = data.pose.pose.position.x
-        self._positions["robot"]["y"] = data.pose.pose.position.y
+        self._positions["robot"].x = data.pose.pose.position.x
+        self._positions["robot"].y = data.pose.pose.position.y
 
         euler = tf.transformations.euler_from_quaternion((
             data.pose.pose.orientation.x,
@@ -71,66 +93,81 @@ class Naito_node:
             data.pose.pose.orientation.z,
             data.pose.pose.orientation.w
         ))
-        self._positions["robot"]["a"] = euler[2]
+        self._positions["robot"].z = euler[2]
+
 
     def _pedes_callback(self,data):
         for odom in data.odoms:
-            if (odom.child_frame_id == "Dummy1" or odom.child_frame_id == "Pedestrian_female 42"):
-                self._positions["woman"]["x"] = odom.pose.pose.position.x
-                self._positions["woman"]["y"] = odom.pose.pose.position.y
-            if (odom.child_frame_id == "Scripted Human" or odom.child_frame_id == "Pedestrian_male 02"):
-                self._positions["enemy"]["x"] = odom.pose.pose.position.x
-                self._positions["enemy"]["y"] = odom.pose.pose.position.y
+            if (odom.child_frame_id in ["Dummy1", "Pedestrian_female 42"]):
+                self._positions["woman"].x = odom.pose.pose.position.x
+                self._positions["woman"].y = odom.pose.pose.position.y
+                self._woman_pub.publish(self._make_point_pub(self._positions["woman"]))
+                
+            if (odom.child_frame_id in ["Scripted Human", "Pedestrian_male 02"]):
+                self._positions["enemy"].x = odom.pose.pose.position.x
+                self._positions["enemy"].y = odom.pose.pose.position.y
+                self._enemy_pub.publish(self._make_point_pub(self._positions["enemy"]))
+            
         self._set_goal()
 
+    def _distance(self,point1,point2):
+        return math.sqrt(pow(point1.x - point2.x, 2) +pow(point1.y - point2.y, 2)) 
+
     def _set_goal(self):
-        self._goal["x"] = self._positions["woman"]["x"]
-        self._goal["y"] = self._positions["woman"]["y"]
+        if(self._distance(self._positions["woman"],self._positions["enemy"]) > 7):  
+            self._goal.x = self._positions["woman"].x
+            self._goal.y = self._positions["woman"].y
+        else:
+            self._goal.x = self._positions["woman"].x * (1-RATE) + self._positions["enemy"].x * RATE
+            self._goal.y = self._positions["woman"].y * (1-RATE) + self._positions["enemy"].y * RATE
+        
+        # check goal was updated
+        if self._distance(self._goal,self._goal_cache) > 0.1:
+            self._goal_cache.x = self._goal.x
+            self._goal_cache.y = self._goal.y
+            self._goal_pub.publish(self._make_point_pub(self._goal))
+            self._reached = False
+        
+
+
+    def _attitude(self,x,y):
+        gap_a = math.atan2(y,x) - self._positions["robot"].z
+    
+        if(gap_a > M_PI):
+            gap_a = -2*M_PI + gap_a
+        if(gap_a < -1*M_PI):
+            gap_a =  2*M_PI - gap_a
+
+        if(gap_a > NEAR_ROT*div):
+            self._next_vel.angular.z = SPD_ANG
+            return False
+        elif(gap_a < -1*NEAR_ROT*div):
+            self._next_vel.angular.z = SPD_ANG*(-1)
+            return False
+        else:
+            self._next_vel.angular.z = 0.0
+            return True
+            
 
     def _set_next_vel(self):
-        to_x = self._goal["x"] - self._positions["robot"]["x"]
-        to_y = self._goal["y"] - self._positions["robot"]["y"]
-        self._goal["a"] = math.atan2(to_x,to_y)
-        to_a = self._goal["a"]
-
-        gap = to_x*to_x + to_y*to_y
-
-        print("gap :({to_x:.2f},{to_y:.2f})={gap:.2f}".format(to_x=to_x,to_y=to_y,gap=gap))
-
-        to_x /= 10
-        to_y /= 10
-
-        # if(to_x >= 0):
-        #     to_x = max(MIN_SPEED, to_x)
-        #     to_x = min(MAX_SPEED, to_x)
-        # else:
-        #     to_x = min(MIN_SPEED*(-1), to_x)
-        #     to_x = max(MAX_SPEED*(-1), to_x)
-        #
-        # if(to_y >= 0):
-        #     to_y = max(MIN_SPEED, to_y)
-        #     to_y = min(MAX_SPEED, to_y)
-        # else:
-        #     to_y = min(MIN_SPEED*(-1), to_y)
-        #     to_y = max(MAX_SPEED*(-1), to_y)
-
-        if(self._val < 30 or gap < NEAR_DIS) :
-            to_x = 0
-            to_y = 0
-            self._val += 1
-            # print("val :{val:d}".format(val=self._val))
-
-        # print("vel :({x:.2f},{y:.2f})".format(x=to_x,y=to_y))
-        # self._next_vel.linear.x = to_x
-        # self._next_vel.linear.y = to_y
-
-        gap_a = to_a - self._positions["robot"]["a"]
-
-        if(gap_a * gap_a < 0.03):
-            self._next_vel.angular.z = 0.0
+        to_x = self._goal.x - self._positions["robot"].x
+        to_y = self._goal.y - self._positions["robot"].y
+        gap = self._distance(self._goal, self._positions["robot"])
+        
+        if(self._reached):
+            self._next_vel.linear.x = 0.0
+            self._attitude(
+                self._positions["enemy"].x - self._positions["woman"].x,
+                self._positions["enemy"].y - self._positions["woman"].y
+            )
         else:
-            self._next_vel.angular.z = 0.4
-
+            if(self._attitude(to_x,to_y)):
+                self._next_vel.linear.x = SPD_LIN
+                if(gap < NEAR_DIS) :
+                    self._reached = True
+            
+        
+            
 
 
 
