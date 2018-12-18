@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+　#!/usr/bin/env python
 # -*- conding:utf8 -*-
 
 from numpy import array
@@ -16,7 +16,7 @@ from geometry_msgs.msg import Twist
 from  morse_helper.msg import PedestrianData
 from   sensor_msgs.msg import LaserScan
 
-
+# Const Definition
 M_PI = 3.14
 NEAR_ROT  = M_PI / 12
 NEAR_DIS  = 0.25
@@ -57,10 +57,12 @@ class Naito_node:
             "robot":Point(),
             "woman":Point(),
             "woman_cache":None,
+            "enemy_cache":None,
             "enemy":Point(),
         }
 
         self._woman_vel = Point()
+        self._enemy_vel = Point()
 
         self._goal = Point()
         self._goal_dir = Point()
@@ -176,10 +178,6 @@ class Naito_node:
             self._woman_vel.y = vel_y
             self._positions["woman_cache"].x = self._positions["woman"].x
             self._positions["woman_cache"].y = self._positions["woman"].y
-
-
-
-
 
 
     def _set_goal(self):

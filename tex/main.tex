@@ -1,0 +1,51 @@
+%\documentclass{kuthesis}
+\documentclass[twocolumn,12pt]{jsarticle}
+\title{不審者からユーザーを守るロボットの動作についての考察}
+\author{内藤 謙史郎}
+\date{2018/12/21}
+
+\begin{document}
+\maketitle
+\section{はじめに}
+一人で帰る夜道……一人で帰るよりも二人・複数人で一緒に帰る方が不審者に襲われにくい。一緒に帰ってくれる役割をロボットに任せられないだろうか。現状でも防犯ブザーのように不審者から身を守るためのグッズがあり、広く利用されているが、それらとまた違った方向で犯罪を抑止できるようなロボットが開発されて、ユーザーにより確かな安心感を提供できればと考える。
+
+\section{関連研究}
+関連のある他の研究をあげながら、本研究の立ち位置を考える。まず、目的地まで(障害物を避けながら)ナビゲートするロボットに関する研究がある\cite{1}。この研究ベースに、不審者との遭遇に対応する動作を実装することになる。どのような動作になるかというところで、周囲の脅威を最小化する護衛ロボットの研究\cite{2}や、ロボットの近づき方とそれに対して人間が受ける印象の研究\cite{3}が参考になると思われる。
+
+
+\section{対象と問題の設定}
+human（ユーザ）, robot, enemy（不審者）という三者を対象として考える。humanは守られる対象である。robotは普段humanと目的地まで連れ立って歩くが、不審者を検知した際にはhumanを守る動きをとるものとする。enemyについては、humanの所有物を奪おうとしている、危害を加えようとしているなど様々な想定が可能であるが、今回はそれらを総括してひとまずhumanのいる地点まで近づくという動きをとるものとする。
+
+以上の三者
+
+\section{研究の流れ}
+\subsection{人間の動きを観察}
+３名の協力者の方にそれぞれhuman, robot, enemyのロールプレイをお願いし、その様子を動画に撮影した。人間ならば不審者からユーザを守ろうとした時どのような動きをとるかを観察し、アルゴリズムとして落とし込めそうな部分を探す。
+
+\subsection{シミュレーション}
+シミュレータmorse上に設定したフィールドに上記の三者を配置し、humanをキーボードで操作可能なように、enemyをhumanに接近するように設定し、それらに対してrobotがとるべきと考えられる動きをシミュレーション上で実装する。
+（ユーザの安心感・不審者側の警戒心といったものをシミュレーションでどう測る？）
+
+\subsection{実験室実験}
+シミュレーション上で実装したアルゴリズムをRobovie-R3の実機にインストールし、実験室内で動作させたい。
+
+\section{アルゴリズム}
+\begin{itemize}
+	\item robotはhumanとenemyを結ぶ直線上に移動する。その際、直線上のどの位置に行くべきか（human寄り、enemy寄り、真ん中、など）をパラメータ化する。
+	\item robotはenemyの方を常に向き続ける。そうすることでプレッシャーを与えることができる。
+	\item 近づいて来る人間が不審者かどうかの識別は今回は考えないものとする（近づいて来るものはenemyのみ）。どの程度近づいてきたら防衛の動きに移るかをパラメータ化する。
+	\item ロボットの移動速度の上限をパラメータ化する（実機ならおそらく実機の移動速度上限がある）。
+\end{itemize}
+
+\section{評価}
+
+
+
+
+
+\begin{thebibliography}{3}
+\bibitem{1} Towards a Socially Acceptable Collision Avoidance for a Mobile Robot Navigating Among Pedestrians Using a Pedestrian Model
+\bibitem{2} Controlling the Movement of Robotic Bodyguards for Maximal Physical Protection
+\bibitem{3} May I help you? - Design of human-like polite approaching behavior -
+\end{thebibliography}
+\end{document}
