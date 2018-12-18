@@ -1,5 +1,8 @@
 %\documentclass{kuthesis}
 \documentclass[twocolumn,12pt]{jsarticle}
+
+\usepackage{bm}
+
 \title{不審者からユーザーを守るロボットの動作についての考察}
 \author{内藤 謙史郎}
 \date{2018/12/21}
@@ -36,11 +39,9 @@ human（ユーザ）, robot, enemy（不審者）という三者を対象とし�
 	\item ロボットの移動速度の上限をパラメータ化する（実機ならおそらく実機の移動速度上限がある）。
 \end{itemize}
 
-\section{評価}
+\input{./algorithm.tex}
 
-
-
-
+\section{評価と考察}
 
 \begin{thebibliography}{3}
 \bibitem{1} Towards a Socially Acceptable Collision Avoidance for a Mobile Robot Navigating Among Pedestrians Using a Pedestrian Model

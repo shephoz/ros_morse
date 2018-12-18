@@ -33,17 +33,19 @@ RATE = 0.3
 PointO = Point()
 
 def norm(point1,point2):
-        return math.sqrt( pow(point1.x - point2.x, 2) + pow(point1.y - point2.y, 2) )
+    return math.sqrt( pow(point1.x - point2.x, 2) + pow(point1.y - point2.y, 2) )
 
+# gap between human and enemy 
+#
 
 class Naito_node:
 
     def __init__(self):
-        rospy.init_node('naito',anonymous=True)
+        rospy.init_node('naito', anonymous=True)
         self._vel_pub = rospy.Publisher('/xbot/cmd_vel', Twist, queue_size=1)
 
         self._goal_pub  = rospy.Publisher('/naito/goal',  PoseStamped, queue_size=10)
-        self._woman_pub = rospy.Publisher('/naito/woman', PoseStamped, queue_size=10)
+        self._human_pub = rospy.Publisher('/naito/human', PoseStamped, queue_size=10)
         self._enemy_pub = rospy.Publisher('/naito/enemy', PoseStamped, queue_size=10)
 
         if(False):
@@ -59,13 +61,13 @@ class Naito_node:
 
         self._positions = {
             "robot":Point(),
-            "woman":Point(),
-            "woman_cache":None,
-            "enemy_cache":None,
+            "human":Point(),
+            "human_cache":None,
             "enemy":Point(),
+            "enemy_cache":None,
         }
 
-        self._woman_vel = Point()
+        self._human_vel = Point()
         self._enemy_vel = Point()
 
         self._goal = Point()
@@ -85,7 +87,7 @@ class Naito_node:
             if(False):
                 print("goal ({x:.2f},{y:.2f})".format(x=self._goal.x,y=self._goal.y) )
                 print("robot({x:.2f},{y:.2f})".format(x=self._positions["robot"].x,y=self._positions["robot"].y) )
-                print("woman({x:.2f},{y:.2f})".format(x=self._positions["woman"].x,y=self._positions["woman"].y) )
+                print("human({x:.2f},{y:.2f})".format(x=self._positions["human"].x,y=self._positions["human"].y) )
                 # print("enemy({x:.2f},{y:.2f})".format(x=self._positions["enemy"].x,y=self._positions["enemy"].y) )
                 # print("\n")
 
@@ -154,10 +156,10 @@ class Naito_node:
     def _pedes_callback(self,data):
         for odom in data.odoms:
             if (odom.child_frame_id in ["Dummy1", "Pedestrian_female 42"]):
-                self._positions["woman"].x = odom.pose.pose.position.x
-                self._positions["woman"].y = odom.pose.pose.position.y
-                self._woman_pub.publish(self._make_point_pub(self._positions["woman"]))
-                self._get_woman_vel()
+                self._positions["human"].x = odom.pose.pose.position.x
+                self._positions["human"].y = odom.pose.pose.position.y
+                self._human_pub.publish(self._make_point_pub(self._positions["human"]))
+                self._get_human_vel()
 
             if (odom.child_frame_id in ["Scripted Human", "Pedestrian_male 02"]):
                 self._positions["enemy"].x = odom.pose.pose.position.x
@@ -166,22 +168,22 @@ class Naito_node:
 
         self._set_goal()
 
-    def _get_woman_vel(self):
-        if(self._positions["woman_cache"] is None):
-            self._positions["woman_cache"] = Point()
-            self._positions["woman_cache"].x = self._positions["woman"].x
-            self._positions["woman_cache"].y = self._positions["woman"].y
+    def _get_human_vel(self):
+        if(self._positions["human_cache"] is None):
+            self._positions["human_cache"] = Point()
+            self._positions["human_cache"].x = self._positions["human"].x
+            self._positions["human_cache"].y = self._positions["human"].y
 
-        length = norm(self._positions["woman"],self._positions["woman_cache"])
+        length = norm(self._positions["human"],self._positions["human_cache"])
         if(length > 0.5):
-            vel_x  = self._positions["woman"].x - self._positions["woman_cache"].x
-            vel_y  = self._positions["woman"].y - self._positions["woman_cache"].y
+            vel_x  = self._positions["human"].x - self._positions["human_cache"].x
+            vel_y  = self._positions["human"].y - self._positions["human_cache"].y
             vel_x /= length
             vel_y /= length
-            self._woman_vel.x = vel_x
-            self._woman_vel.y = vel_y
-            self._positions["woman_cache"].x = self._positions["woman"].x
-            self._positions["woman_cache"].y = self._positions["woman"].y
+            self._human_vel.x = vel_x
+            self._human_vel.y = vel_y
+            self._positions["human_cache"].x = self._positions["human"].x
+            self._positions["human_cache"].y = self._positions["human"].y
 
     def _get_enemy_vel(self):
         if(self._positions["enemy_cache"] is None):
@@ -202,28 +204,28 @@ class Naito_node:
 
 
     def _get_vel_robot_des(self):
-        bw_woman_and_enemy = Point()
-        bw_woman_and_enemy.x = self._positions["enemy"].x - self._positions["woman"].x
-        bw_woman_and_enemy.y = self._positions["enemy"].y - self._positions["woman"].y
-        bw_length = norm(self._positions["enemy"], self._positions["woman"])
+        bw_human_and_enemy   = Point()
+        bw_human_and_enemy.x = self._positions["enemy"].x - self._positions["human"].x
+        bw_human_and_enemy.y = self._positions["enemy"].y - self._positions["human"].y
+        bw_length = norm(self._positions["enemy"], self._positions["human"])
 
         w_robot = 0.9
-        vel_robot_des = w_robot * ( abs(vel_enemy_ver - vel_woman_ver) + 1 ) * (T_robot - )
+        vel_robot_des = w_robot * ( abs(vel_enemy_ver - vel_human_ver) + 1 ) * (T_robot - )
 
 
 
 
     def _set_goal(self):
-        if(norm(self._positions["woman"],self._positions["enemy"]) > 7):
+        if(norm(self._positions["human"],self._positions["enemy"]) > 7):
 
             p1 = Point()
-            p1.x = self._positions["woman"].x + self._woman_vel.y
-            p1.y = self._positions["woman"].y - self._woman_vel.x
+            p1.x = self._positions["human"].x + self._human_vel.y
+            p1.y = self._positions["human"].y - self._human_vel.x
             p1_l = norm(self._positions["robot"],p1)
 
             p2 = Point()
-            p2.x = self._positions["woman"].x - self._woman_vel.y
-            p2.y = self._positions["woman"].y + self._woman_vel.x
+            p2.x = self._positions["human"].x - self._human_vel.y
+            p2.y = self._positions["human"].y + self._human_vel.x
             p2_l = norm(self._positions["robot"],p2)
 
             if(p1_l < p2_l):
@@ -232,14 +234,14 @@ class Naito_node:
             else:
                 self._goal.x = p2.x
                 self._goal.y = p2.y
-            self._goal.z = math.atan2(self._woman_vel.y,self._woman_vel.x)
+            self._goal.z = math.atan2(self._human_vel.y,self._human_vel.x)
 
         else:
-            self._goal.x = self._positions["woman"].x * (1-RATE) + self._positions["enemy"].x * RATE
-            self._goal.y = self._positions["woman"].y * (1-RATE) + self._positions["enemy"].y * RATE
+            self._goal.x = self._positions["human"].x * (1-RATE) + self._positions["enemy"].x * RATE
+            self._goal.y = self._positions["human"].y * (1-RATE) + self._positions["enemy"].y * RATE
             self._goal.z = math.atan2(
-                self._positions["enemy"].y - self._positions["woman"].y,
-                self._positions["enemy"].x - self._positions["woman"].x
+                self._positions["enemy"].y - self._positions["human"].y,
+                self._positions["enemy"].x - self._positions["human"].x
             )
 
         # check goal was updated
