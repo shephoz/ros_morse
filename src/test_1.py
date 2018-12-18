@@ -1,4 +1,4 @@
-　#!/usr/bin/env python
+#!/usr/bin/env python
 # -*- conding:utf8 -*-
 
 from numpy import array
@@ -17,6 +17,10 @@ from  morse_helper.msg import PedestrianData
 from   sensor_msgs.msg import LaserScan
 
 # Const Definition
+R_PROTECT = 7.0
+R_PRIVACY = 4.0
+VEL_R_MAX = 2.0
+
 M_PI = 3.14
 NEAR_ROT  = M_PI / 12
 NEAR_DIS  = 0.25
@@ -178,6 +182,35 @@ class Naito_node:
             self._woman_vel.y = vel_y
             self._positions["woman_cache"].x = self._positions["woman"].x
             self._positions["woman_cache"].y = self._positions["woman"].y
+
+    def _get_enemy_vel(self):
+        if(self._positions["enemy_cache"] is None):
+            self._positions["enemy_cache"] = Point()
+            self._positions["enemy_cache"].x = self._positions["enemy"].x
+            self._positions["enemy_cache"].y = self._positions["enemy"].y
+
+        length = norm(self._positions["enemy"],self._positions["enemy_cache"])
+        if(length > 0.5):
+            vel_x  = self._positions["enemy"].x - self._positions["enemy_cache"].x
+            vel_y  = self._positions["enemy"].y - self._positions["enemy_cache"].y
+            vel_x /= length
+            vel_y /= length
+            self._enemy_vel.x = vel_x
+            self._enemy_vel.y = vel_y
+            self._positions["enemy_cache"].x = self._positions["enemy"].x
+            self._positions["enemy_cache"].y = self._positions["enemy"].y
+
+
+    def _get_vel_robot_des(self):
+        bw_woman_and_enemy = Point()
+        bw_woman_and_enemy.x = self._positions["enemy"].x - self._positions["woman"].x
+        bw_woman_and_enemy.y = self._positions["enemy"].y - self._positions["woman"].y
+        bw_length = norm(self._positions["enemy"], self._positions["woman"])
+
+        w_robot = 0.9
+        vel_robot_des = w_robot * ( abs(vel_enemy_ver - vel_woman_ver) + 1 ) * (T_robot - )
+
+
 
 
     def _set_goal(self):
