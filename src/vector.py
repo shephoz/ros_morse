@@ -4,6 +4,13 @@ class Vector:
     # attributes
     # - x : float
     # - y : float
+    # methods
+    # - path_from(from) : Vector
+    # - path_to  (from) : Vector
+    # - normalize() : Vector
+    # - norm()       : float
+    # - norm(vector) : float
+    # - tan() : float
     def __init__(self,arg1=None,arg2=None):
         # initialize x, y
         if(arg1 is None):
@@ -20,21 +27,22 @@ class Vector:
                 # Vector(float,float)
                 self.x = arg1
                 self.y = arg2
+
     def set(self,x,y):
         self.x = x
         self.y = y
 
-    def path_from(self,from):
+    def path_from(self,vector):
         r = Vector()
-        r.x = self.x - from.x
-        r.y = self.y - from.y
-        return
+        r.x = self.x - vector.x
+        r.y = self.y - vector.y
+        return r
 
-    def path_to(self,to):
+    def path_to(self,vector):
         r = Vector()
-        r.x = to.x - self.x
-        r.y = to.y - self.y
-        return
+        r.x = vector.x - self.x
+        r.y = vector.y - self.y
+        return r
 
     def normalize(self):
         return Vector(self.x/self.norm(), self.y/self.norm())
@@ -44,3 +52,6 @@ class Vector:
             return math.hypot(self.x, self.y)
         else:
             return math.hypot(self.x - vector.x, self.y - vector.y)
+
+    def tan(self):
+        return math.atan2(self.y, self.x)

@@ -57,7 +57,7 @@ class Naito_node:
         self.human = Subject()
         self.enemy = Subject()
 
-        self._goal = Pose()
+        self.goal = Pose()
 
         self._goal_dir = Point()
         self._goal_cache = Point()
@@ -73,10 +73,10 @@ class Naito_node:
             self._vel_pub.publish(self._next_vel)
 
             if(False):
-                print( "goal ({x:.2f},{y:.2f})".format(x=self._goal.x,     y=self._goal.y    ) )
-                print( "robot({x:.2f},{y:.2f})".format(x=self.robot.pos.x, y=self.robot.pos.y) )
-                print( "human({x:.2f},{y:.2f})".format(x=self.human.pos.x, y=self.human.pos.y) )
-                print( "enemy({x:.2f},{y:.2f})".format(x=self.enemy.pos.x, y=self.enemy.pos.y) )
+                print( "goal ({x:.2f},{y:.2f})".format(x=self.goal.x,      y=self.goal.y     ) )
+                print( "robot({x:.2f},{y:.2f})".format(x=self.robot.pose.x, y=self.robot.pose.y) )
+                print( "human({x:.2f},{y:.2f})".format(x=self.human.pose.x, y=self.human.pose.y) )
+                print( "enemy({x:.2f},{y:.2f})".format(x=self.enemy.pose.x, y=self.enemy.pose.y) )
                 print("\n")
 
             try:
@@ -91,21 +91,21 @@ class Naito_node:
 
         T_robot   = Pose()
         T_robot.vec = self.human.path_to(self.enemy)
-        vel_robot_des = W_robot * ( abs(self.enemy.vel.perp - self.human.vel.perp) + 1 ) * (T_robot - )
+        vel_robot_des = W_robot * ( abs(self.enemy.vel.perp - self.human.vel.perp) + 1 ) * (T_robot - P_robot)
 
 
 
 
-    def _make_point_pub(self,point):
-        goal = PoseStamped()
-        goal.header.frame_id = "map"
-        goal.pose.position.x  = point.x
-        goal.pose.position.y  = point.y
-        quaternion = tf.transformations.quaternion_from_euler(0,0,point.z)
-        goal.pose.orientation.z = quaternion[2]
-        goal.pose.orientation.w = quaternion[3]
-        # print(goal)
-        return goal
+    # def _make_point_pub(self,point):
+    #     goal = PoseStamped()
+    #     goal.header.frame_id = "map"
+    #     goal.pose.position.x  = point.x
+    #     goal.pose.position.y  = point.y
+    #     quaternion = tf.transformations.quaternion_from_euler(0,0,point.z)
+    #     goal.pose.orientation.z = quaternion[2]
+    #     goal.pose.orientation.w = quaternion[3]
+    #     # print(goal)
+    #     return goal
 
     def _robot_callback(self,data):
         self.robot.update_pose(data.pose.pose)
@@ -114,10 +114,10 @@ class Naito_node:
         for odom in data.odoms:
             if (odom.child_frame_id in ["Dummy1", "Pedestrian_female 42"]):
                 self.human.update_pose(odom.pose.pose)
-                self.human_pub.publish(self._make_point_pub(self.human.pos.position))
+                # self.human_pub.publish(self._make_point_pub(self.human.pos.position))
             if (odom.child_frame_id in ["Scripted Human", "Pedestrian_male 02"]):
                 self.enemy.update_pose(odom.pose.pose)
-                self.enemy_pub.publish(self._make_point_pub(self.human.pos.position))
+                # self.enemy_pub.publish(self._make_point_pub(self.human.pos.position))
             self._set_goal()
 
 
@@ -158,44 +158,37 @@ class Naito_node:
         if(self.human.gap_to(self.enemy) > 7):
 
             p1 = Pose(
-                self.human.pos.x + self.human.vel.y,
-                self.human.pos.y - self.human.vel.x,
-                math.atan2(self.human.vel.y, self.human.vel.x)
+                self.human.pose.x + self.human.vel.y,
+                self.human.pose.y - self.human.vel.x,
+                self.human.vel.tan()
             )
-            p1_length = norm(self._position["robot"],p1)
+            p1_length = p1.gap_to(self.robot.pose)
 
-            p2 = Pose()
-            p2.x = self.human.pos.x - self.human.vel.y
-            p2.y = self.human.pos.y + self.human.vel.x
-            p2_length = norm(self._position["robot"],p2)
-
-            if(p1_length < p2_length):
-                self._goal.x = p1.x
-                self._goal.y = p1.y
-            else:
-                self._goal.x = p2.x
-                self._goal.y = p2.y
-            self._goal.z = math.atan2(self.human.vel.y, self.human.vel.x)
+            p2 = Pose(
+                self.human.pose.x - self.human.vel.y,
+                self.human.pose.y + self.human.vel.x,
+                self.human.vel.tan()
+            )
+            p2_length = p2.gap_to(self.robot.pose)
+            self.goal = p1 if p1_length < p2_length else p2
 
         else:
-            self._goal.x = self.human.pos.x * (1-RATE) + self.enemy.pos.x * RATE
-            self._goal.y = self.human.pos.y * (1-RATE) + self.enemy.pos.y * RATE
-            self._goal.z = math.atan2(
-                self.enemy.pos.y - self.human.pos.y,
-                self.enemy.pos.x - self.human.pos.x
+            self.goal = Pose(
+                self.human.pose.x * (1-RATE) + self.enemy.pose.x * RATE,
+                self.human.pose.y * (1-RATE) + self.enemy.pose.y * RATE,
+                self.human.path_to(self.enemy).tan()
             )
 
         # check goal was updated
-        if norm(self._goal,self._goal_cache) > 0.1:
-            self._goal_cache.x = self._goal.x
-            self._goal_cache.y = self._goal.y
-            self._goal_pub.publish(self._make_point_pub(self._goal))
+        if self.goal.is_moved(self.goal_cache, 0.1):
+            self.goal_cache.set(self.goal)
+            # self.goal_pub.publish(self._make_point_pub(self._goal))
             self._reached = False
 
 
 
-    def _attitude(self,goal_z,turn_to_avoid):
-        gap_a = goal_z - self.robot.pos.z
+    def _attitude(self,goal_yaw,turn_to_avoid):
+        gap_a = goal_yaw - self.robot.pose.yaw
 
         if(math.pi < gap_a):
             gap_a = -2 * math.pi + gap_a
@@ -217,8 +210,8 @@ class Naito_node:
 
 
     def _set_next_vel(self):
-        to_x = self._goal.x - self.robot.pos.x
-        to_y = self._goal.y - self.robot.pos.y
+        to_x = self._goal.x - self.robot.pose.x
+        to_y = self._goal.y - self.robot.pose.y
         gap = norm(self._goal, self.robot.pos)
 
         if(self._reached):

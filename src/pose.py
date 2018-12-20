@@ -9,6 +9,7 @@ class Pose:
     # - y : float
     # methods
     # - is_moved(pose : Pose)
+    # - is_moved(pose : Pose, threshold : float)
     # aliases
     # - gap_to -> Vector
 
@@ -17,7 +18,7 @@ class Pose:
             # Pose()
             self.vec = Vector()
             self.yaw = 0.0
-        elif(isinstance(arg1,Vector):
+        elif(isinstance(arg1,Vector)):
             # Pose(Vector,yaw)
             self.vec = arg1
             self.yaw = arg2
@@ -53,5 +54,8 @@ class Pose:
     def gap_to(self,pose):
         return self.pose.vec.norm(pose.vec)
 
-    def is_moved(slef,pose):
-        return  self.gap_to(pose) > 0.5
+    def is_moved(self,pose,thre=None):
+        if(thre in None):
+            return self.gap_to(pose) > 0.5
+        else:
+            return self.gap_to(pose) > thre

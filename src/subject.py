@@ -7,7 +7,7 @@ class Subject:
     # - cache : Pose
     # - vel   : Vector
     # methods
-    # - set_pose(pose : Pose)
+    # - update_pose(pose : Pose) -> pose.set()
     # - calc_vel()
     # aliases
     # - gap_to  -> Pose
@@ -18,7 +18,7 @@ class Subject:
         self.cache = None
         self.vel   = Vector()
 
-    def set_pose(self,pose):
+    def update_pose(self,pose):
         self.pose.set(pose)
         self.calc_vel()
 
