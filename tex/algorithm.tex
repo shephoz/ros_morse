@@ -1,19 +1,23 @@
 \subsection{A Noded for Human's Behabiour as a protector/guard}
 
-\begin{enumerate}
-  \item $\bm{v}_R_{des} = W_R (|v_e_{\perp} - v_h_{\perp}|)(T_R - P_R)$
+1. $\bm{v}_R_{des} = W_R (|v_e_{\perp} - v_h_{\perp}|)(T_R - P_R)$
+
   where $T_R = \frac{(P_e - P_h)}{|P_e - P_h|}r_{protect} + P_h$
-  \item $f_R = \frac{\bm{v}_R_{des}}{\bm{v}_R}$
-  \item \begin{eqnarray*}
-  \psi_R_{des} &=& \frac{(P_e - P_R)}{|P_e - P_R|} \\
-  r_{protect}  &=& W_R r_{privacy} \frac{v_R_{max}}{max(|v_e_{\parallel} - v_h_{\parallel}|,v_R_{max})}
-  \end{eqnarray*}
-\end{enumerate}
+
+2. $f_R = \frac{\bm{v}_R_{des}}{\bm{v}_R}$
+
+3. $\psi_R_{des} = \frac{(P_e - P_R)}{|P_e - P_R|}$
+
+$r_{protect}  = W_R r_{privacy} \frac{v_R_{max}}{max(|v_e_{\parallel} - v_h_{\parallel}|,v_R_{max})}$
 
 \subsection{Sanity Check}
 \begin{itemize}
-	\item $P_R = T_R \Rightarrow \bm{v}_R_{des} = \bm{0}$ : at equilibrium point, protector stays when enemy keeps still
-	\item $|v_e_{\prep} - v_h_{\prep}| \nearrow \Rightarrow \bm{v}_R_{des} \nearrow$ : protector moves faster to the meeting point when enemy comes faster
-	\item Protector always faces enemy : facing enemy to pressure on enemy
-	\item $|v_e_{\parallel} - v_h_{\parallel}| \nearrow \ge v_R_{max} \Rightarrow r_{protect} \searrow$ : when enemy moves too fast along target, protector would shring the range of protection
+	\item $P_R = T_R \Rightarrow \bm{v}_R_{des} = \bm{0}$ \\
+    : at equilibrium point, protector stays when enemy keeps still
+	\item $|v_e_{\prep} - v_h_{\prep}| \nearrow \Rightarrow \bm{v}_R_{des} \nearrow$ \\
+    : protector moves faster to the meeting point when enemy comes faster
+	\item Protector always faces enemy \\
+    : facing enemy to pressure on enemy
+	\item $|v_e_{\parallel} - v_h_{\parallel}| \nearrow \ge v_R_{max} \Rightarrow r_{protect} \searrow$ \\
+    : when enemy moves too fast along target, protector would shring the range of protection
 \end{itemize}

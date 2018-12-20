@@ -1,13 +1,17 @@
 #!/usr/bin/env python
 # -*- conding:utf8 -*-
 
-from numpy import array
-import math
+from vector  import Vector
+from pose    import Pose
+from subject import Subject
 
+import math
 import rospy
 import tf
 
 from geometry_msgs.msg import Point
+from geometry_msgs.msg import Quaternion
+
 from geometry_msgs.msg import PoseStamped
 
 from geometry_msgs.msg import PoseWithCovarianceStamped
@@ -17,26 +21,16 @@ from  morse_helper.msg import PedestrianData
 from   sensor_msgs.msg import LaserScan
 
 # Const Definition
-R_PROTECT = 7.0
-R_PRIVACY = 4.0
+R_PRIVACY = 1.0
 VEL_R_MAX = 2.0
 
-M_PI = 3.14
-NEAR_ROT  = M_PI / 12
+NEAR_ROT  = math.pi / 12
 NEAR_DIS  = 0.25
 
-SPD_ANG = M_PI / 1
+SPD_ANG = math.pi / 1
 SPD_LIN = 1.2
 
 RATE = 0.3
-
-PointO = Point()
-
-def norm(point1,point2):
-    return math.sqrt( pow(point1.x - point2.x, 2) + pow(point1.y - point2.y, 2) )
-
-# gap between human and enemy 
-#
 
 class Naito_node:
 
@@ -44,33 +38,27 @@ class Naito_node:
         rospy.init_node('naito', anonymous=True)
         self._vel_pub = rospy.Publisher('/xbot/cmd_vel', Twist, queue_size=1)
 
-        self._goal_pub  = rospy.Publisher('/naito/goal',  PoseStamped, queue_size=10)
-        self._human_pub = rospy.Publisher('/naito/human', PoseStamped, queue_size=10)
-        self._enemy_pub = rospy.Publisher('/naito/enemy', PoseStamped, queue_size=10)
+        self._goal_pub = rospy.Publisher('/naito/goal',  PoseStamped, queue_size=10)
+        self.human_pub = rospy.Publisher('/naito/human', PoseStamped, queue_size=10)
+        self.enemy_pub = rospy.Publisher('/naito/enemy', PoseStamped, queue_size=10)
 
         if(False):
-            rospy.Subscriber('/pose_6d', PoseWithCovarianceStamped, self._robot_callback)
+            rospy.Subscriber('/pose_6d',   PoseWithCovarianceStamped, self._robot_callback)
         else:
-            rospy.Subscriber('/xbot/odom', Odometry, self._robot_callback)
+            rospy.Subscriber('/xbot/odom', Odometry,                  self._robot_callback)
 
         rospy.Subscriber('/pedestrians', PedestrianData, self._pedes_callback)
-        rospy.Subscriber('/scan', LaserScan, self._scan_callback)
+        rospy.Subscriber('/scan',        LaserScan,      self._scan_callback)
 
         self._phase = 0
         self._reached = False
 
-        self._positions = {
-            "robot":Point(),
-            "human":Point(),
-            "human_cache":None,
-            "enemy":Point(),
-            "enemy_cache":None,
-        }
+        self.robot = Subject()
+        self.human = Subject()
+        self.enemy = Subject()
 
-        self._human_vel = Point()
-        self._enemy_vel = Point()
+        self._goal = Pose()
 
-        self._goal = Point()
         self._goal_dir = Point()
         self._goal_cache = Point()
         self._next_vel = Twist()
@@ -85,16 +73,28 @@ class Naito_node:
             self._vel_pub.publish(self._next_vel)
 
             if(False):
-                print("goal ({x:.2f},{y:.2f})".format(x=self._goal.x,y=self._goal.y) )
-                print("robot({x:.2f},{y:.2f})".format(x=self._positions["robot"].x,y=self._positions["robot"].y) )
-                print("human({x:.2f},{y:.2f})".format(x=self._positions["human"].x,y=self._positions["human"].y) )
-                # print("enemy({x:.2f},{y:.2f})".format(x=self._positions["enemy"].x,y=self._positions["enemy"].y) )
-                # print("\n")
+                print( "goal ({x:.2f},{y:.2f})".format(x=self._goal.x,     y=self._goal.y    ) )
+                print( "robot({x:.2f},{y:.2f})".format(x=self.robot.pos.x, y=self.robot.pos.y) )
+                print( "human({x:.2f},{y:.2f})".format(x=self.human.pos.x, y=self.human.pos.y) )
+                print( "enemy({x:.2f},{y:.2f})".format(x=self.enemy.pos.x, y=self.enemy.pos.y) )
+                print("\n")
 
             try:
                 r.sleep()
             except:
                 print("time error!")
+
+
+    def _get_vel_robot_des(self):
+        W_robot = 0.9
+        r_protect = W_robot * R_PRIVACY * VEL_R_MAX / max(abs(self.enemy.vel.para - self.human.vel.para), VEL_R_MAX)
+
+        T_robot   = Pose()
+        T_robot.vec = self.human.path_to(self.enemy)
+        vel_robot_des = W_robot * ( abs(self.enemy.vel.perp - self.human.vel.perp) + 1 ) * (T_robot - )
+
+
+
 
     def _make_point_pub(self,point):
         goal = PoseStamped()
@@ -108,20 +108,21 @@ class Naito_node:
         return goal
 
     def _robot_callback(self,data):
-        self._positions["robot"].x = data.pose.pose.position.x
-        self._positions["robot"].y = data.pose.pose.position.y
+        self.robot.update_pose(data.pose.pose)
 
-        euler = tf.transformations.euler_from_quaternion((
-            data.pose.pose.orientation.x,
-            data.pose.pose.orientation.y,
-            data.pose.pose.orientation.z,
-            data.pose.pose.orientation.w
-        ))
-        self._positions["robot"].z = euler[2]
+    def _pedes_callback(self,data):
+        for odom in data.odoms:
+            if (odom.child_frame_id in ["Dummy1", "Pedestrian_female 42"]):
+                self.human.update_pose(odom.pose.pose)
+                self.human_pub.publish(self._make_point_pub(self.human.pos.position))
+            if (odom.child_frame_id in ["Scripted Human", "Pedestrian_male 02"]):
+                self.enemy.update_pose(odom.pose.pose)
+                self.enemy_pub.publish(self._make_point_pub(self.human.pos.position))
+            self._set_goal()
 
 
     def _scan_callback(self,data):
-        ranges = data.ranges
+        ranges    = data.ranges
         range_max = data.range_max
         right = 0
         mid   = 0
@@ -153,95 +154,35 @@ class Naito_node:
             self._turn_to_avoid = 0
 
 
-    def _pedes_callback(self,data):
-        for odom in data.odoms:
-            if (odom.child_frame_id in ["Dummy1", "Pedestrian_female 42"]):
-                self._positions["human"].x = odom.pose.pose.position.x
-                self._positions["human"].y = odom.pose.pose.position.y
-                self._human_pub.publish(self._make_point_pub(self._positions["human"]))
-                self._get_human_vel()
-
-            if (odom.child_frame_id in ["Scripted Human", "Pedestrian_male 02"]):
-                self._positions["enemy"].x = odom.pose.pose.position.x
-                self._positions["enemy"].y = odom.pose.pose.position.y
-                self._enemy_pub.publish(self._make_point_pub(self._positions["enemy"]))
-
-        self._set_goal()
-
-    def _get_human_vel(self):
-        if(self._positions["human_cache"] is None):
-            self._positions["human_cache"] = Point()
-            self._positions["human_cache"].x = self._positions["human"].x
-            self._positions["human_cache"].y = self._positions["human"].y
-
-        length = norm(self._positions["human"],self._positions["human_cache"])
-        if(length > 0.5):
-            vel_x  = self._positions["human"].x - self._positions["human_cache"].x
-            vel_y  = self._positions["human"].y - self._positions["human_cache"].y
-            vel_x /= length
-            vel_y /= length
-            self._human_vel.x = vel_x
-            self._human_vel.y = vel_y
-            self._positions["human_cache"].x = self._positions["human"].x
-            self._positions["human_cache"].y = self._positions["human"].y
-
-    def _get_enemy_vel(self):
-        if(self._positions["enemy_cache"] is None):
-            self._positions["enemy_cache"] = Point()
-            self._positions["enemy_cache"].x = self._positions["enemy"].x
-            self._positions["enemy_cache"].y = self._positions["enemy"].y
-
-        length = norm(self._positions["enemy"],self._positions["enemy_cache"])
-        if(length > 0.5):
-            vel_x  = self._positions["enemy"].x - self._positions["enemy_cache"].x
-            vel_y  = self._positions["enemy"].y - self._positions["enemy_cache"].y
-            vel_x /= length
-            vel_y /= length
-            self._enemy_vel.x = vel_x
-            self._enemy_vel.y = vel_y
-            self._positions["enemy_cache"].x = self._positions["enemy"].x
-            self._positions["enemy_cache"].y = self._positions["enemy"].y
-
-
-    def _get_vel_robot_des(self):
-        bw_human_and_enemy   = Point()
-        bw_human_and_enemy.x = self._positions["enemy"].x - self._positions["human"].x
-        bw_human_and_enemy.y = self._positions["enemy"].y - self._positions["human"].y
-        bw_length = norm(self._positions["enemy"], self._positions["human"])
-
-        w_robot = 0.9
-        vel_robot_des = w_robot * ( abs(vel_enemy_ver - vel_human_ver) + 1 ) * (T_robot - )
-
-
-
-
     def _set_goal(self):
-        if(norm(self._positions["human"],self._positions["enemy"]) > 7):
+        if(self.human.gap_to(self.enemy) > 7):
 
-            p1 = Point()
-            p1.x = self._positions["human"].x + self._human_vel.y
-            p1.y = self._positions["human"].y - self._human_vel.x
-            p1_l = norm(self._positions["robot"],p1)
+            p1 = Pose(
+                self.human.pos.x + self.human.vel.y,
+                self.human.pos.y - self.human.vel.x,
+                math.atan2(self.human.vel.y, self.human.vel.x)
+            )
+            p1_length = norm(self._position["robot"],p1)
 
-            p2 = Point()
-            p2.x = self._positions["human"].x - self._human_vel.y
-            p2.y = self._positions["human"].y + self._human_vel.x
-            p2_l = norm(self._positions["robot"],p2)
+            p2 = Pose()
+            p2.x = self.human.pos.x - self.human.vel.y
+            p2.y = self.human.pos.y + self.human.vel.x
+            p2_length = norm(self._position["robot"],p2)
 
-            if(p1_l < p2_l):
+            if(p1_length < p2_length):
                 self._goal.x = p1.x
                 self._goal.y = p1.y
             else:
                 self._goal.x = p2.x
                 self._goal.y = p2.y
-            self._goal.z = math.atan2(self._human_vel.y,self._human_vel.x)
+            self._goal.z = math.atan2(self.human.vel.y, self.human.vel.x)
 
         else:
-            self._goal.x = self._positions["human"].x * (1-RATE) + self._positions["enemy"].x * RATE
-            self._goal.y = self._positions["human"].y * (1-RATE) + self._positions["enemy"].y * RATE
+            self._goal.x = self.human.pos.x * (1-RATE) + self.enemy.pos.x * RATE
+            self._goal.y = self.human.pos.y * (1-RATE) + self.enemy.pos.y * RATE
             self._goal.z = math.atan2(
-                self._positions["enemy"].y - self._positions["human"].y,
-                self._positions["enemy"].x - self._positions["human"].x
+                self.enemy.pos.y - self.human.pos.y,
+                self.enemy.pos.x - self.human.pos.x
             )
 
         # check goal was updated
@@ -254,25 +195,12 @@ class Naito_node:
 
 
     def _attitude(self,goal_z,turn_to_avoid):
-        gap_a = goal_z - self._positions["robot"].z
+        gap_a = goal_z - self.robot.pos.z
 
-        back_enabled = False
-        if(not back_enabled):
-            flag = 1
-        else:
-            if(M_PI * 0.5 <= gap_a < M_PI * 1.5):
-                gap_a = gap_a - M_PI
-                flag = -1
-            elif(M_PI * -1.5 <= gap_a < M_PI * -0.5):
-                gap_a = gap_a + M_PI
-                flag = -1
-            else:
-                flag = 1
-
-        if(M_PI < gap_a):
-            gap_a = -2 * M_PI + gap_a
-        if(gap_a < -1 * M_PI):
-            gap_a =  2 * M_PI - gap_a
+        if(math.pi < gap_a):
+            gap_a = -2 * math.pi + gap_a
+        if(gap_a < -1 * math.pi):
+            gap_a =  2 * math.pi - gap_a
 
         if(abs(gap_a) > NEAR_ROT * 2):
             flag = 0
@@ -287,25 +215,20 @@ class Naito_node:
         if(turn_to_avoid):
             self._next_vel.angular.z += SPD_ANG * self._turn_to_avoid
 
-        return flag
-
 
     def _set_next_vel(self):
-        to_x = self._goal.x - self._positions["robot"].x
-        to_y = self._goal.y - self._positions["robot"].y
-        gap = norm(self._goal, self._positions["robot"])
+        to_x = self._goal.x - self.robot.pos.x
+        to_y = self._goal.y - self.robot.pos.y
+        gap = norm(self._goal, self.robot.pos)
 
         if(self._reached):
             self._next_vel.linear.x = 0.0
             self._attitude(self._goal.z,False)
         else:
-            self._next_vel.linear.x = self._attitude(math.atan2(to_y,to_x), True) * SPD_LIN
+            self._attitude(math.atan2(to_y,to_x), True)
+            self._next_vel.linear.x = SPD_LIN
             if(gap < NEAR_DIS) :
                 self._reached = True
-
-
-
-
 
 
 
