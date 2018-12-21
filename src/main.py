@@ -20,9 +20,12 @@ from  morse_helper.msg import PedestrianData
 from   sensor_msgs.msg import LaserScan
 
 # Const Definition
-R_PRIVACY = 2.0
-VEL_R_MAX = 2.0
+#R_PRIVACY = 1.0
+VEL_R_MAX = 1.5
 W_ROBOT = 0.9
+r_protect=0.9
+
+r_social =1.0
 
 NEAR_ROT  = math.pi / 12
 NEAR_DIS  = 0.25
