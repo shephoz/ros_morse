@@ -1,5 +1,7 @@
 from vector import Vector
 
+import tf
+
 class Pose:
     # attributes
     # - vec : Vector
@@ -27,6 +29,9 @@ class Pose:
             self.vec = Vector(arg1,arg2)
             self.yaw = arg3
 
+    def __str__(self):
+        return format("({},{:.2f})".format(self.vec,self.yaw))
+
     def set(self,pose):
         if(isinstance(pose,Pose)):
             # if pose is Pose that I defined
@@ -52,10 +57,10 @@ class Pose:
         return self.vec.y
 
     def gap_to(self,pose):
-        return self.pose.vec.norm(pose.vec)
+        return self.vec.norm(pose.vec)
 
     def is_moved(self,pose,thre=None):
-        if(thre in None):
+        if(thre is None):
             return self.gap_to(pose) > 0.5
         else:
             return self.gap_to(pose) > thre

@@ -9,11 +9,10 @@ import math
 import rospy
 import tf
 
-from geometry_msgs.msg import Point
-from geometry_msgs.msg import Quaternion
+# from geometry_msgs.msg import Point
+# from geometry_msgs.msg import Quaternion
 
 from geometry_msgs.msg import PoseStamped
-
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from      nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
@@ -21,8 +20,9 @@ from  morse_helper.msg import PedestrianData
 from   sensor_msgs.msg import LaserScan
 
 # Const Definition
-R_PRIVACY = 1.0
+R_PRIVACY = 2.0
 VEL_R_MAX = 2.0
+W_ROBOT = 0.9
 
 NEAR_ROT  = math.pi / 12
 NEAR_DIS  = 0.25
@@ -36,47 +36,50 @@ class Naito_node:
 
     def __init__(self):
         rospy.init_node('naito', anonymous=True)
-        self._vel_pub = rospy.Publisher('/xbot/cmd_vel', Twist, queue_size=1)
+        self.vel_pub = rospy.Publisher('/xbot/cmd_vel', Twist, queue_size=1)
 
-        self._goal_pub = rospy.Publisher('/naito/goal',  PoseStamped, queue_size=10)
+        self.goal_pub  = rospy.Publisher('/naito/goal',  PoseStamped, queue_size=10)
         self.human_pub = rospy.Publisher('/naito/human', PoseStamped, queue_size=10)
         self.enemy_pub = rospy.Publisher('/naito/enemy', PoseStamped, queue_size=10)
 
         if(False):
-            rospy.Subscriber('/pose_6d',   PoseWithCovarianceStamped, self._robot_callback)
+            rospy.Subscriber('/pose_6d',   PoseWithCovarianceStamped, self.robot_callback)
         else:
-            rospy.Subscriber('/xbot/odom', Odometry,                  self._robot_callback)
+            rospy.Subscriber('/xbot/odom', Odometry,                  self.robot_callback)
 
-        rospy.Subscriber('/pedestrians', PedestrianData, self._pedes_callback)
-        rospy.Subscriber('/scan',        LaserScan,      self._scan_callback)
+        rospy.Subscriber('/pedestrians', PedestrianData, self.pedes_callback)
+        rospy.Subscriber('/scan',        LaserScan,      self.scan_callback)
 
-        self._phase = 0
-        self._reached = False
+        self.reached = False
 
         self.robot = Subject()
         self.human = Subject()
         self.enemy = Subject()
 
-        self.goal = Pose()
+        self.goal       = Pose()
+        self.goal_cache = Pose()
 
-        self._goal_dir = Point()
-        self._goal_cache = Point()
-        self._next_vel = Twist()
+        self.next_vel = Twist()
 
-        self._turn_to_avoid = 0
+        self.turn_to_avoid = 0
 
         r = rospy.Rate(30)
 
         while not rospy.is_shutdown():
 
-            self._set_next_vel()
-            self._vel_pub.publish(self._next_vel)
+            if(
+                not self.robot.cache is None
+                and not self.human.cache is None
+                and not self.enemy.cache is None
+            ):
+                self.set_next_vel()
+                self.vel_pub.publish(self.next_vel)
 
-            if(False):
-                print( "goal ({x:.2f},{y:.2f})".format(x=self.goal.x,      y=self.goal.y     ) )
-                print( "robot({x:.2f},{y:.2f})".format(x=self.robot.pose.x, y=self.robot.pose.y) )
-                print( "human({x:.2f},{y:.2f})".format(x=self.human.pose.x, y=self.human.pose.y) )
-                print( "enemy({x:.2f},{y:.2f})".format(x=self.enemy.pose.x, y=self.enemy.pose.y) )
+            if(True):
+                print( "goal {}".format(self.goal ) )
+                print( "robot{}".format(self.robot) )
+                print( "human{}".format(self.human) )
+                print( "enemy{}".format(self.enemy) )
                 print("\n")
 
             try:
@@ -85,18 +88,7 @@ class Naito_node:
                 print("time error!")
 
 
-    def _get_vel_robot_des(self):
-        W_robot = 0.9
-        r_protect = W_robot * R_PRIVACY * VEL_R_MAX / max(abs(self.enemy.vel.para - self.human.vel.para), VEL_R_MAX)
-
-        T_robot   = Pose()
-        T_robot.vec = self.human.path_to(self.enemy)
-        vel_robot_des = W_robot * ( abs(self.enemy.vel.perp - self.human.vel.perp) + 1 ) * (T_robot - P_robot)
-
-
-
-
-    # def _make_point_pub(self,point):
+    # def make_point_pub(self,point):
     #     goal = PoseStamped()
     #     goal.header.frame_id = "map"
     #     goal.pose.position.x  = point.x
@@ -107,10 +99,10 @@ class Naito_node:
     #     # print(goal)
     #     return goal
 
-    def _robot_callback(self,data):
+    def robot_callback(self,data):
         self.robot.update_pose(data.pose.pose)
 
-    def _pedes_callback(self,data):
+    def pedes_callback(self,data):
         for odom in data.odoms:
             if (odom.child_frame_id in ["Dummy1", "Pedestrian_female 42"]):
                 self.human.update_pose(odom.pose.pose)
@@ -118,10 +110,10 @@ class Naito_node:
             if (odom.child_frame_id in ["Scripted Human", "Pedestrian_male 02"]):
                 self.enemy.update_pose(odom.pose.pose)
                 # self.enemy_pub.publish(self._make_point_pub(self.human.pos.position))
-            self._set_goal()
+        self.set_goal()
 
 
-    def _scan_callback(self,data):
+    def scan_callback(self,data):
         ranges    = data.ranges
         range_max = data.range_max
         right = 0
@@ -142,52 +134,55 @@ class Naito_node:
         right /= piv
         mid   /= piv
         left  /= piv
-        print("{:.4f}-{:.4f}-{:.4f}".format(left,mid,right))
+        # print("{:.4f}-{:.4f}-{:.4f}".format(left,mid,right))
 
         thre = 5.0
         rati = 1.0
         if(mid < thre):
-            self._turn_to_avoid = pow(thre - mid, 2)* rati
+            self.turn_to_avoid = pow(thre - mid, 2)* rati
             if(left < right):
-                self._turn_to_avoid *= -1
+                self.turn_to_avoid *= -1
         else:
-            self._turn_to_avoid = 0
+            self.turn_to_avoid = 0
 
 
-    def _set_goal(self):
-        if(self.human.gap_to(self.enemy) > 7):
+    def set_goal(self):
+        if(False and self.human.gap_to(self.enemy) > 7):
 
             p1 = Pose(
                 self.human.pose.x + self.human.vel.y,
                 self.human.pose.y - self.human.vel.x,
-                self.human.vel.tan()
+                self.human.vel.rad
             )
             p1_length = p1.gap_to(self.robot.pose)
 
             p2 = Pose(
                 self.human.pose.x - self.human.vel.y,
                 self.human.pose.y + self.human.vel.x,
-                self.human.vel.tan()
+                self.human.vel.rad
             )
             p2_length = p2.gap_to(self.robot.pose)
             self.goal = p1 if p1_length < p2_length else p2
 
         else:
-            self.goal = Pose(
-                self.human.pose.x * (1-RATE) + self.enemy.pose.x * RATE,
-                self.human.pose.y * (1-RATE) + self.enemy.pose.y * RATE,
-                self.human.path_to(self.enemy).tan()
-            )
+            r_protect = W_ROBOT * R_PRIVACY * (VEL_R_MAX / max(abs(self.enemy.para(self.human) - self.human.para(self.enemy)), VEL_R_MAX))
+
+            T_robot = Pose()
+            T_robot.vec = self.human.path_to(self.enemy).normalize()
+            T_robot.vec = T_robot.vec.scalar_prod(r_protect)
+            T_robot.vec = T_robot.vec.plus(self.human.pose.vec)
+            T_robot.yaw = self.robot.path_to(self.enemy).rad
+            self.goal = T_robot
 
         # check goal was updated
         if self.goal.is_moved(self.goal_cache, 0.1):
             self.goal_cache.set(self.goal)
-            # self.goal_pub.publish(self._make_point_pub(self._goal))
-            self._reached = False
+            # self.goal_pub.publish(self.make_point_pub(self.goal))
+            self.reached = False
 
 
 
-    def _attitude(self,goal_yaw,turn_to_avoid):
+    def attitude(self,goal_yaw,turn_to_avoid):
         gap_a = goal_yaw - self.robot.pose.yaw
 
         if(math.pi < gap_a):
@@ -199,29 +194,30 @@ class Naito_node:
             flag = 0
 
         if(gap_a > NEAR_ROT):
-            self._next_vel.angular.z = SPD_ANG
+            self.next_vel.angular.z = SPD_ANG
         elif(gap_a < -1*NEAR_ROT):
-            self._next_vel.angular.z = SPD_ANG*(-1)
+            self.next_vel.angular.z = SPD_ANG*(-1)
         else:
-            self._next_vel.angular.z = 0.0
+            self.next_vel.angular.z = 0.0
 
         if(turn_to_avoid):
-            self._next_vel.angular.z += SPD_ANG * self._turn_to_avoid
+            self.next_vel.angular.z += SPD_ANG * self.turn_to_avoid
 
 
-    def _set_next_vel(self):
-        to_x = self._goal.x - self.robot.pose.x
-        to_y = self._goal.y - self.robot.pose.y
-        gap = norm(self._goal, self.robot.pos)
+    def set_next_vel(self):
+        v_r_des = self.robot.pose.vec.path_to(self.goal.vec)
+        v_r_des = v_r_des.scalar_prod( W_ROBOT * (abs(self.enemy.perp(self.human) - self.human.perp(self.enemy)) + 1) )
 
-        if(self._reached):
-            self._next_vel.linear.x = 0.0
-            self._attitude(self._goal.z,False)
+        if(self.reached):
+            self.next_vel.linear.x = 0.0
+            self.attitude(self.goal.yaw,False)
         else:
-            self._attitude(math.atan2(to_y,to_x), True)
-            self._next_vel.linear.x = SPD_LIN
-            if(gap < NEAR_DIS) :
-                self._reached = True
+            self.attitude(v_r_des.rad, False) #True)
+            self.next_vel.linear.x = v_r_des.norm()
+            if(v_r_des.norm() < NEAR_DIS) :
+                self.reached = True
+            else:
+                print("not reached : {} : {}".format(v_r_des,v_r_des.norm()))
 
 
 
