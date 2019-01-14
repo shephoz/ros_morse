@@ -38,12 +38,10 @@ RATE = 0.3
 class Naito_node:
 
     def __init__(self):
-        rospy.init_node('naito', anonymous=True)
-        self.vel_pub = rospy.Publisher('/xbot/cmd_vel', Twist, queue_size=1)
-
-        self.goal_pub  = rospy.Publisher('/naito/goal',  PoseStamped, queue_size=10)
-        self.human_pub = rospy.Publisher('/naito/human', PoseStamped, queue_size=10)
-        self.enemy_pub = rospy.Publisher('/naito/enemy', PoseStamped, queue_size=10)
+        self.vel_pub   = rospy.Publisher('/xbot/cmd_vel', Twist, queue_size=1)
+        # self.goal_pub  = rospy.Publisher('/naito/goal',   PoseStamped, queue_size=10)
+        # self.human_pub = rospy.Publisher('/naito/human',  PoseStamped, queue_size=10)
+        # self.enemy_pub = rospy.Publisher('/naito/enemy',  PoseStamped, queue_size=10)
 
         if(False):
             rospy.Subscriber('/pose_6d',   PoseWithCovarianceStamped, self.robot_callback)
@@ -53,42 +51,16 @@ class Naito_node:
         rospy.Subscriber('/pedestrians', PedestrianData, self.pedes_callback)
         rospy.Subscriber('/scan',        LaserScan,      self.scan_callback)
 
-        self.reached = False
-
         self.robot = Subject()
         self.human = Subject()
         self.enemy = Subject()
 
         self.goal       = Pose()
         self.goal_cache = Pose()
-
-        self.next_vel = Twist()
-
+        self.reached       = False
         self.turn_to_avoid = 0
 
-        r = rospy.Rate(30)
-
-        while not rospy.is_shutdown():
-
-            if(
-                not self.robot.cache is None
-                and not self.human.cache is None
-                and not self.enemy.cache is None
-            ):
-                self.set_next_vel()
-                self.vel_pub.publish(self.next_vel)
-
-            if(True):
-                print( "goal {}".format(self.goal ) )
-                print( "robot{}".format(self.robot) )
-                print( "human{}".format(self.human) )
-                print( "enemy{}".format(self.enemy) )
-                print("\n")
-
-            try:
-                r.sleep()
-            except:
-                print("time error!")
+        self.next_vel = Twist()
 
 
     # def make_point_pub(self,point):
@@ -151,23 +123,22 @@ class Naito_node:
 
     def set_goal(self):
         if(False and self.human.gap_to(self.enemy) > 7):
-
+            # normal mode : no enemy
             p1 = Pose(
                 self.human.pose.x + self.human.vel.y,
                 self.human.pose.y - self.human.vel.x,
                 self.human.vel.rad
             )
-            p1_length = p1.gap_to(self.robot.pose)
-
             p2 = Pose(
                 self.human.pose.x - self.human.vel.y,
                 self.human.pose.y + self.human.vel.x,
                 self.human.vel.rad
             )
-            p2_length = p2.gap_to(self.robot.pose)
-            self.goal = p1 if p1_length < p2_length else p2
+            closer_check = p1.gap_to(self.robot.pose) < p2.gap_to(self.robot.pose)
+            self.goal = p1 if closer_check else p2
 
         else:
+            # protect mode : encounter the enemy
             r_protect = W_ROBOT * R_PRIVACY * (VEL_R_MAX / max(abs(self.enemy.para(self.human) - self.human.para(self.enemy)), VEL_R_MAX))
 
             T_robot = Pose()
@@ -185,26 +156,32 @@ class Naito_node:
 
 
 
-    def attitude(self,goal_yaw,turn_to_avoid):
+    def attitude(self,
+        goal_yaw,
+        turn_to_avoid
+    ):
         gap_a = goal_yaw - self.robot.pose.yaw
 
+        # normalize gap_a to be included by [-PI , PI]
         if(math.pi < gap_a):
             gap_a = -2 * math.pi + gap_a
         if(gap_a < -1 * math.pi):
             gap_a =  2 * math.pi - gap_a
 
-        if(abs(gap_a) > NEAR_ROT * 2):
-            flag = 0
+        # returns sign(+/-) of linear velocity for walk_backward("sushiro-aruki")
+        walk_backward = 1 if(abs(gap_a) < math.pi - NEAR_ROT) else -1
 
         if(gap_a > NEAR_ROT):
             self.next_vel.angular.z = SPD_ANG
-        elif(gap_a < -1*NEAR_ROT):
+        elif(gap_a < NEAR_ROT*-1):
             self.next_vel.angular.z = SPD_ANG*(-1)
         else:
             self.next_vel.angular.z = 0.0
 
-        if(turn_to_avoid):
-            self.next_vel.angular.z += SPD_ANG * self.turn_to_avoid
+        if(abs(gap_a) > NEAR_ROT and turn_to_avoid):
+            weight = 1.2
+            self.next_vel.angular.z += SPD_ANG * weight * self.turn_to_avoid
+
 
 
     def set_next_vel(self):
@@ -229,4 +206,25 @@ class Naito_node:
 
 if __name__ == "__main__":
     #help(tf.transformations)
+    rospy.init_node('naito', anonymous=True)
     naito = Naito_node()
+    r = rospy.Rate(30)
+
+    while not rospy.is_shutdown():
+        if(
+            not self.robot.cache is None
+            and not self.human.cache is None
+            and not self.enemy.cache is None
+        ):
+            self.set_next_vel()
+            self.vel_pub.publish(self.next_vel)
+        if(True):
+            print( "goal {}".format(self.goal ) )
+            print( "robot{}".format(self.robot) )
+            print( "human{}".format(self.human) )
+            print( "enemy{}".format(self.enemy) )
+            print("\n")
+        try:
+            r.sleep()
+        except:
+            print("time error!")
