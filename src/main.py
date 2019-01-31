@@ -20,15 +20,13 @@ from  morse_helper.msg import PedestrianData
 from   sensor_msgs.msg import LaserScan
 
 # Const Definition
-#R_PRIVACY = 1.0
 VEL_R_MAX = 1.5
-W_ROBOT = 0.9
-r_protect=0.9
+W_ROBOT   = 0.9
+R_PROTECT = 0.9
+R_SOCIAL  = 1.0
 
-r_social =1.0
-
-NEAR_ROT  = math.pi / 12
-NEAR_DIS  = 0.25
+NEAR_ROT  = math.pi / 12 # [rad]
+NEAR_DIS  = 0.15 # [m]
 
 SPD_ANG = math.pi / 1
 SPD_LIN = 1.2
@@ -43,11 +41,8 @@ class Naito_node:
         # self.human_pub = rospy.Publisher('/naito/human',  PoseStamped, queue_size=10)
         # self.enemy_pub = rospy.Publisher('/naito/enemy',  PoseStamped, queue_size=10)
 
-        if(False):
-            rospy.Subscriber('/pose_6d',   PoseWithCovarianceStamped, self.robot_callback)
-        else:
-            rospy.Subscriber('/xbot/odom', Odometry,                  self.robot_callback)
-
+        #rospy.Subscriber('/pose_6d',   PoseWithCovarianceStamped, self.robot_callback)
+        rospy.Subscriber('/xbot/odom',   Odometry,       self.robot_callback)
         rospy.Subscriber('/pedestrians', PedestrianData, self.pedes_callback)
         rospy.Subscriber('/scan',        LaserScan,      self.scan_callback)
 
@@ -89,11 +84,14 @@ class Naito_node:
 
 
     def scan_callback(self,data):
+        # from scan message
         ranges    = data.ranges
         range_max = data.range_max
+        # let : amount of obstacle about each direction
         right = 0
         mid   = 0
         left  = 0
+        # const : define width & pan of left & right
         width = 60
         pan   = 250
 
@@ -111,10 +109,12 @@ class Naito_node:
         left  /= piv
         # print("{:.4f}-{:.4f}-{:.4f}".format(left,mid,right))
 
+        # const : define threshold & ratio to turn_to_avoid
         thre = 5.0
         rati = 1.0
-        if(mid < thre):
-            self.turn_to_avoid = pow(thre - mid, 2)* rati
+
+        if(mid < thre): # if in front of robot is obstabled,
+            self.turn_to_avoid = pow(thre - mid, 2) * rati
             if(left < right):
                 self.turn_to_avoid *= -1
         else:
@@ -123,7 +123,7 @@ class Naito_node:
 
     def set_goal(self):
         if(False and self.human.gap_to(self.enemy) > 7):
-            # normal mode : no enemy
+            # normal mode : walk aside the partner
             p1 = Pose(
                 self.human.pose.x + self.human.vel.y,
                 self.human.pose.y - self.human.vel.x,
@@ -139,11 +139,11 @@ class Naito_node:
 
         else:
             # protect mode : encounter the enemy
-            r_protect = W_ROBOT * R_PRIVACY * (VEL_R_MAX / max(abs(self.enemy.para(self.human) - self.human.para(self.enemy)), VEL_R_MAX))
+            d_protect = R_PROTECT * (VEL_R_MAX / max(abs(self.enemy.para(self.human) - self.human.para(self.enemy)), VEL_R_MAX))
 
             T_robot = Pose()
             T_robot.vec = self.human.path_to(self.enemy).normalize()
-            T_robot.vec = T_robot.vec.scalar_prod(r_protect)
+            T_robot.vec = T_robot.vec.scalar_prod(d_protect)
             T_robot.vec = T_robot.vec.plus(self.human.pose.vec)
             T_robot.yaw = self.robot.path_to(self.enemy).rad
             self.goal = T_robot
@@ -168,8 +168,8 @@ class Naito_node:
         if(gap_a < -1 * math.pi):
             gap_a =  2 * math.pi - gap_a
 
-        # returns sign(+/-) of linear velocity for walk_backward("sushiro-aruki")
-        walk_backward = 1 if(abs(gap_a) < math.pi - NEAR_ROT) else -1
+        # returns sign(+/-) of linear velocity for walk_backwards("ushiro-aruki")
+        walk_backwards = abs(gap_a) > math.pi - NEAR_ROT
 
         if(gap_a > NEAR_ROT):
             self.next_vel.angular.z = SPD_ANG
@@ -182,6 +182,8 @@ class Naito_node:
             weight = 1.2
             self.next_vel.angular.z += SPD_ANG * weight * self.turn_to_avoid
 
+        return -1 if walk_backwards else 1
+
 
 
     def set_next_vel(self):
@@ -190,14 +192,14 @@ class Naito_node:
 
         if(self.reached):
             self.next_vel.linear.x = 0.0
-            self.attitude(self.goal.yaw,False)
+            self.attitude(self.goal.yaw, False)
         else:
-            self.attitude(v_r_des.rad, False) #True)
-            self.next_vel.linear.x = v_r_des.norm()
+            sign = self.attitude(v_r_des.rad, False) #True)
+            self.next_vel.linear.x = v_r_des.norm() * sign
             if(v_r_des.norm() < NEAR_DIS) :
                 self.reached = True
             else:
-                print("not reached : {} : {}".format(v_r_des,v_r_des.norm()))
+                print("not reached : {} gap={}".format(v_r_des,v_r_des.norm()))
 
 
 
@@ -205,7 +207,6 @@ class Naito_node:
 
 
 if __name__ == "__main__":
-    #help(tf.transformations)
     rospy.init_node('naito', anonymous=True)
     naito = Naito_node()
     r = rospy.Rate(30)
