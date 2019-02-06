@@ -1,33 +1,36 @@
-%\documentclass{kuthesis}
-%\documentclass[twocolumn]{jsarticle}
-\documentclass[12pt,titlepage]{jsarticle}
+\documentclass{kuthesis}
+%\documentclass[9pt,twocolumn]{jsarticle}
+%\documentclass[12pt,titlepage]{jsarticle}
 
 \usepackage{bm}
-\usepackage{listings}
+\usepackage{url}
 
+\usepackage{listings}
 \lstset{
-basicstyle={\ttfamily\scriptsize}, %書体の指定
-frame=none,      %フレームの指定
-framesep=10pt,   %フレームと中身（コード）の間隔
-breaklines=true, %行が長くなった場合の改行
-linewidth=12cm,  %フレームの横幅
-lineskip=0.0ex,  %行間の調整
-tabsize=2        %Tabを何文字幅にするかの指定
+	basicstyle={\ttfamily\scriptsize}, %書体の指定
+	frame=none,      %フレームの指定
+	framesep=10pt,   %フレームと中身（コード）の間隔
+	breaklines=true, %行が長くなった場合の改行
+	linewidth=12cm,  %フレームの横幅
+	lineskip=0.0ex,  %行間の調整
+	tabsize=2        %Tabを何文字幅にするかの指定
 }
 
-% \begin{lstlisting}
-% \end{lstlisting}
-
-\title{不審者からユーザーを守るロボットの\\動作アルゴリズムの構築}
+\title{一緒に移動するユーザーを不審者から守る\\ロボットの研究}
 \author{内藤 謙史郎}
 \date{2019/2/8}
 
 \begin{document}
 \maketitle
-\section{はじめに}
+
+\tableofcontents
+\newpage
+
+\section{序論}
 
 /*TODO 多分もうちょっと広いbackgroundから書ける*/
 
+人が何かするのを助ける＝＞人が何かしようとするのを妨げる
 
 一人で帰る夜道……不審者に遭遇しないかと不安になることも多いだろう。そんなとき、一人で帰るよりも二人・複数人で一緒に帰る方が不審者に襲われにくいということは想像に難くない。しかし、いつも一緒に帰ってくれる人がいるとは限らない。その役割をロボットに任せることはできないだろうか。
 
@@ -36,7 +39,7 @@ tabsize=2        %Tabを何文字幅にするかの指定
 \section{関連研究}
 関連のある他の研究をあげながら、本研究の立ち位置について考えたい。
 
-まず、人とロボットが同じ空間内にあってそれぞれ行動するときに起こる現象に関する研究というものが数多く存在する。例えば、目的地まで障害物を避けながら人をナビゲートするロボットに関する研究がある\cite{1}。本研究はそのような研究の中の一つと考えることができるだろう。
+まず、人とロボットが同じ空間内にあってそれぞれ行動するときに起こる現象ついての研究というものが数多く存在する。例えば、目的地まで障害物を避けながら人をナビゲートするロボットに関する研究がある\cite{1}。本研究はそのような研究の中の一つと考えることができるだろう。
 
 さらに、空間を共有する人間に対してロボット良い印象を与えることを目的とした研究が存在する。例えば、展示を見て回る人間を極力邪魔しないようにしつつ案内を必要とする人間に近づくという動作に関する研究\cite{2}などがある。本研究は、これらとは逆に、不審者に対してプレッシャーを与え、犯罪行動を抑止するような動作を追求するものとなる。
 
@@ -45,107 +48,182 @@ tabsize=2        %Tabを何文字幅にするかの指定
 /* TODO [2],[3]もっと具体的な内容まで書く？ */
 
 \section{対象と問題の設定}
-robot, partner（ユーザ）, enemy（不審者）という三者を対象として考える。robotは普段partnerと目的地まで連れ立って歩く状態であるが、不審者を検知した際にはpartnerを守る動きをとる状態に移行する。それぞれの状態をnormal mode（通常状態）、protect mode（護衛状態）と呼ぶ。
+次の三者を対象とした問題を考える。
 
-/* TODO 図 */
+\begin{itemize}
+	\item robot
+	\item partner
+	\item enemy
+\end{itemize}
 
-enemyについては、partnerの所有物を奪おうとしている、危害を加えようとしているなど様々な想定が可能であるが、今回はそれらを総括してひとまずpartnerのいる地点まで近づくという動きをとるものとする。また、近づいてくる人物がenemyであると判断するためには様々な要素が必要であるだろうが、今回はその判断の中身には触れず、単純に近づいて来るものはenemyであるという扱いをする。
+robotとpartnerは目的地まで連れ立って移動するが、enemy（不審者）を検知した際にrobotはpartnerを守る状態に移行する。enemy検知後の状態をprotect mode（護衛状態）、それ以前の状態をnormal mode（通常状態）と呼ぶ。
+
+/* TODO 図：配置とモードの遷移(1P) */
+
+enemyについては、partnerの所有物を奪おうとしている、危害を加えようとしているなど様々な想定が可能であるが、今回はそれらを総括してひとまずpartnerのいる地点まで近づくという動きをとるものとする。また、enemy検知において、近づいてくる人物が不審者であると判断するためには様々な要素が必要であるだろうが、今回はその判断の中身には触れず、単純に近づいて来るものはenemyであるという扱いをする。
 
 以上の三者の中において、robotにどのような動きをとらせるのが最適かを考えていく。
 
 
-\section{観察・分析}
-ロボットにあるタスクを行わせたい時、実装するべき最適なアルゴリズムを考えるにあたり、最初に参考とすべき情報として、同じタスクを人間がどのように実行するのかを観察することがあげられる。
+\section{不審者からユーザーを守る振る舞いの観察}
+ロボットにあるタスクを行わせたい時、実装するべき最適なアルゴリズムを考えるにあたり、参考にできる情報としてまず、同じタスクを人間がどのように実行するのかを観察することがあげられる。
 
-\subsection{観察サンプルとなる動画の撮影}
+\subsection{予備実験の設定}
 
 ３名の協力者の方にそれぞれrobot, partner, enemyのロールプレイをお願いし、その様子を動画に撮影した。
 
-/* TODO ビデオのキャプチャ画像 */
+並んで移動するユーザーとロボットに対し、正面から不審者が近づいて来るケースと後ろから追いかける形で近づいて来るケースを想定した。
 
-人間ならば不審者からユーザを守ろうとした時どのような動きをとるかを観察し、アルゴリズムとして落とし込めそうな部分を探した。
+/* TODO ビデオのキャプチャ画像(1P程度) */
 
-\subsection{分析}
-
-観察した結果、以下のような動作を
+\subsection{考察}
+動画から人間ならば不審者からユーザを守ろうとした時どのような動きをとるかを観察し、アルゴリズムとして落とし込めそうな部分を探した。
+その結果、以下のような動作が有効そうな振る舞いとしてあがった。
 
 \begin{itemize}
-\item robotは、partnerとenemyを結んだ直線上を位置取る。
-\item robotは、partnerと一定の距離を保ちながら動く。
-\item robotは、常にenemyの方を向いている。
-\item /*TODO*/
+\item robotは、partnerとenemyを割って入るような位置に移動する
+\item robotは、partnerと一定の距離を保ちながら動く
+\item robotは、常にenemyの方を向く
 \end{itemize}
 
-
-/* TODO 前から向かって来る状況・後ろから追いかけられる状況 */
+partnerとenemyのを結んだ直線上に割り込むような形で位置どり、partnerと一定の距離を取りながら移動することでenemyのpartnerへの動きを妨げるという狙いと、enemyの方を向き続けることでenemyに対してプレッシャーを与える狙いが見て取れた。
 
 \section{アルゴリズム}
 
-/* TODO 比較対象となるただ避けるだけ（protect mode が存在しない）のアルゴリズムについても記述する？ */
+/* TODO normal mode のアルゴリズムについても記述する？ */
 
+robot, partner, enemyの現在位置をそれぞれ $P_r$, $P_p$, $P_e$ とする。
+
+robotが向かうべき地点を$T_r$とすると、
+
+\begin{equation}
+T_r = \frac{(P_e - P_p)}{|P_e - P_p|}d + P_p
+\end{equation}
+
+ただしここで、$d$はrobotとpartnerとの間で保つべき距離とする。
+patnerのいる地点からenemyのいる地点への方向に$d$だけ離れた点を目標地点としている。
+
+$d$については以下の式で表される。
+
+\begin{equation}
+d  = r_{privacy} \frac{v_r_{max}}{max(|v_e_{\parallel} - v_p_{\parallel}|,v_r_{max})}
+\end{equation}
+
+
+
+$r_{privacy}$の説明
+
+$v_e_{\parallel}$の説明
+
+/* TODO$ $v_e_{\parallel}$, $v_p_{\prep}$とかの説明用図 */
+
+また、robotの向く方向$\psi_r_{des}$を、以下の式により表す。
+
+\begin{equation}
+	\psi_r_{des} = \frac{(P_p - P_r)}{|P_p - P_r|}
+\end{equation}
+
+以上の条件において、robotに設定する速度$\bm{v}_R_{des}$は、以下の通りになる。
+\begin{equation}
+	\bm{v}_R_{des} = W_r (|v_e_{\perp} - v_p_{\perp}|+1)(T_r - P_r)
+\end{equation}
+
+$v_e_{\parallel}$の説明
+
+% \begin{itemize}
+% 	\item robotはpartnerとenemyを結ぶ直線上に移動する
+% 	\item 直線上のどの位置に行くべきか（例えばpartner寄り、enemy寄り、真ん中、など）をパラメータ化する。
+% 	\item robotはenemyの方を常に向き続ける。
+% 	\item enemyどの程度（どのように）近づいてきたら防衛の動きに移るかをパラメータ化する。
+% 	\item social range（普段のロボットと人の距離）, protect ranges（遭遇時の距離）をパラメータ化する。
+% 	\item （ロボットの移動速度の上限をパラメータ化する（実機の移動速度上限））
+% \end{itemize}
+
+%\input{./algorithm.tex}
+
+/* 図 (0.6p)*/
+
+\section{システム}
+
+\subsection{ロボット}
+
+ロボットとしてはRobovie R3 \footnote{\url{https://www.vstone.co.jp/products/robovie_r3/index.html}} を想定する。Robovie R3は"人とロボットのコミュニケーション研究のための等身大ロボット"であり、"実際に人間が活動する環境での実証実験を想定し、点字ブロックやスロープなどの凹凸を乗り越えられる高い走破性や、高齢者と並んで移動するための移動速度（約2.5km/h）などを実現してい"るため、本研究で使用するのに適している。
+
+/* RobovieR3の画像(0.4p) */
+
+\subsection{ソフトウェア}
+\subsubsection{ROS}
+ロボットの制御にはROSを用いる。ROSはロボットの動作に関わるプロセスをpackageと呼ばれる形で抽象化し、多数のpackage間で交わされる通信をとりもつ。
+
+ROSではこの通信をmessageと呼び、packageはmessageを発信（publish）または受信（subscribe）している。ロボットに新しい動作を実装したい場合、処理としては大きく以下のふたつに分かれる。
 \begin{itemize}
-	\item robotはpartnerとenemyを結ぶ直線上に移動する
-	\item 直線上のどの位置に行くべきか（例えばpartner寄り、enemy寄り、真ん中、など）をパラメータ化する。
-	\item robotはenemyの方を常に向き続ける。（enemyに対してプレッシャーを与える）
-	\item enemyどの程度（どのように）近づいてきたら防衛の動きに移るかをパラメータ化する。
-	\item social range（普段のロボットと人の距離）, protect ranges（遭遇時の距離）をパラメータ化する。
-	\item （ロボットの移動速度の上限をパラメータ化する（実機の移動速度上限））
+	\item センサー類から必要な情報を取得する
+	\item 取得した情報を処理し、ロボットにさせる動作の内容を決定する
+	\item 駆動部分に動作の指示を出す
 \end{itemize}
 
-\input{./algorithm.tex}
+１番目の処理を行うためにセンサー類を担当するpackageから読み取り情報をmessageとして受信し、３番目の処理を行うために動作の内容を記述したmessageを発信するという流れになる。
 
-/* TODO 説明 と 図 */
+\subsubsection{位置同定}
+ロボットの動作を決定するためには、robot,partner,enemyそれぞれの位置を知る必要がある。位置同定はロボットに取り付けたレーダー式距離センサで行い、これと所与の地図情報により自身の位置の同定と人間のトラッキングを行う。
 
-\section{実装}
+\subsubsection{速度の指定}
+RobovieR3は"前後左右ななめのあらゆる方向へ移動が可能となる「全方位移動機構（オムニホイール）」"を搭載している。
+この移動の方向・速さを指定するために/cmd_velというmessageを発信する。/cmd_velはX軸・Y軸方向への平行移動とZ軸周りの回転を数値で指定できるようになっており、これにより5節で述べたアルゴリズムで導出した速度を駆動部分へ伝える。
 
-/* TODO */
+/* TODO センサやモジュールの図(0.4p) */
 
-使用したモジュール、メッセージ、
+\subsubsection{実験用移動制御モジュール}
 
-\section{実験}
+本研究で
+
+\begin{description}
+  \item[normal mode] robotはpartnerに並んで移動する
+  \item[enemy detection]
+  \item[protect mode] /* TODO 先述のアルゴリズムを実行する状態 */
+\end{description}
+
+/* TODO \uparrow subsubsubsectionは作れないので、構成考える。箇条書きにせず文でだらだら書く方がいいかも */
+
+
+% \begin{lstlisting}
+% \end{lstlisting}
+
+
+\section{動作例}
 
 \subsection{シミュレーション}
 先の過程で得られたアルゴリズム案を、まずはシミュレーションの中で実行してみる。
+/* TODO シミュレーション自体の説明 */
 
-シミュレータmorse上に設定したフィールドに対象となるの三者を配置し、partnerをキーボードで操作可能なように、enemyをpartnerに接近するようにスクリプトにより設定し、それらに対してrobotがとるべきと考えられる動きをシミュレーション上で実装する。
+シミュレータmorse上に設定したフィールドに対象となるの三者を配置し、partnerをキーボードで操作可能なように、enemyをpartnerに接近するようにスクリプトにより設定し、それらに対してrobotがとるべき動きをシミュレーション上で実装する。
 
 /* TODO パラメータを変化させた複数のシミュレーション結果をまとめる */
+/* TODO キャプチャ画像(1p) */
 
 %（ユーザの安心感・不審者側の警戒心といったものをシミュレーションでどう測る？）
 
-\subsection{実験室実験}
-シミュレーション上で実装したアルゴリズムをRobovie-R3の実機にインストールし、実験室内で動作させたい。
-（←ロボットについての説明とかだけ書いといて、実機を動かした動画は2/14の発表で見せる？）
+% \subsection{実験室実験}
+% シミュレーション上で実装したアルゴリズムをRobovie-R3の実機にインストールし、実験室内で動作させた(い)。
+% （←ロボットについての説明とかだけ書いといて、実機を動かした動画は2/14の発表で見せる？）
 
+\section{考察}
 
-\subsection{評価手法}
-
-\begin{itemize}
-\item 提案手法vs障害物を避けるだけのアルゴリズム
-\item シミュレーション上or実機と人間の被験者
-\end{itemize}
-
-
-\section{結論}
-
-
-\subsection{評価}
-/* TODO */
-
-\subsection{考察}
-/* TODO */
+\subsection{提案手法について}
+/* TODO  */ % 唯一主観的に書いていいところ
 
 \subsection{今後の課題}
 /* TODO */
 
-\section{謝辞}
-/* TODO */
+\section{結論}
+/* TODO 全体のおさらい */
 
-\section*{/* TODO \downarrow 参考文献の書き方 */}
+\section{謝辞}
+本研究に取り組むにあたり、多大なるご指導を賜りました京都大学大学院情報学研究科の神田崇行教授、技術的な助言をいただきました同研究科のYuyi Liu特定研究員に深くお礼を申し上げます。また、日頃より様々なご協力をいただきました、神田研究室の皆様に感謝の意を申し上げます。
 
 \begin{thebibliography}{3}
-\bibitem{1} Towards a Socially Acceptable Collision Avoidance for a Mobile Robot Navigating Among Pedestrians Using a Pedestrian Model
-\bibitem{2} May I help you? - Design of partner-like polite approaching behavior -
-\bibitem{3} Controlling the Movement of Robotic Bodyguards for Maximal Physical Protection
+\bibitem{1} Masahiro Shiomi, Francesco Zanlungo, Kotaro Hayashi, Takayuki Kanda: Towards a Socially Acceptable Collision Avoidance for a Mobile Robot Navigating Among Pedestrians Using a Pedestrian Model, International Journal of Social Robotics(IJSR), Vol.6, Issue 3 ,pp.443-455, 2014.
+\bibitem{2} Yusuke Kato, Takayuki Kanda, Hiroshi Ishiguro, May I help you? - Design of human-like polite approaching behavior -, ACM/IEEE international conference on Human-robot interaction (HRI 2015), pp. 35-42, 2015.
+\bibitem{3} Taranjeet Singh Bhatia, Gürkan Solmaz, Damla Turgut, Ladislau Bölöni: Controlling the Movement of Robotic Bodyguards for Maximal Physical Protection, FLAIRS Conference(2016)
 \end{thebibliography}
 \end{document}
