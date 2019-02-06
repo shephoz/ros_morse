@@ -41,6 +41,9 @@ class Subject:
     def path_to(self,subject):
         return self.pose.vec.path_to(subject.pose.vec)
 
+    def path_from(self,subject):
+        return self.pose.vec.path_from(subject.pose.vec)
+
     def para(self,opposite_subject):
         return self.vel.para(opposite_subject.vel)
 

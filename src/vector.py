@@ -32,6 +32,18 @@ class Vector:
     def __str__(self):
         return "({:.2f},{:.2f})".format(self.x, self.y)
 
+    def __add__(self,other):
+        return self.plus(other)
+
+    def __sub__(self,other):
+        return self.path_from(other)
+
+    def __mul__(self,other):
+        if(type(other)==float):
+            return self.scalar_prod(other)
+        else:
+            return None
+
     @property
     def rad(self):
         return math.atan2(self.y, self.x)
@@ -66,6 +78,8 @@ class Vector:
         return r
 
     def normalize(self):
+        if(self.norm()==0):
+            return Vector(0.0,0.0)
         return Vector(self.x/self.norm(), self.y/self.norm())
 
     def norm(self,vector=None):
