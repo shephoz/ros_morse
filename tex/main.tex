@@ -9,13 +9,13 @@
 
 \usepackage{listings}
 \lstset{
-	basicstyle={\ttfamily\scriptsize}, %書体の指定
+	basicstyle={\ttfamily\small}, %書体の指定
 	frame=none,      %フレームの指定
-	framesep=10pt,   %フレームと中身（コード）の間隔
+	framesep=11pt,   %フレームと中身（コード）の間隔
 	breaklines=true, %行が長くなった場合の改行
 	linewidth=12cm,  %フレームの横幅
-	lineskip=0.0ex,  %行間の調整
-	tabsize=2        %Tabを何文字幅にするかの指定
+	lineskip=-1.2ex,  %行間の調整
+	tabsize=4        %Tabを何文字幅にするかの指定
 }
 
 \def\LATEX{{\rm (L\kern-.36em\raise.3ex\hbox{\sc a})\TeX}}
@@ -43,33 +43,11 @@
 \maketitle
 
 \begin{jabstract}				% 和文梗概
-この手引では，特別研究報告書および修士論文をどのような構成とするか，またどの
-ような形式で作成するかを説明したものである。また，当教室で定めた形式に則った
-論文を日本語\LaTeX を用いて作成するためのスタイル・ファイル，
-\verb|kuisthesis|の使い方についても説明している。なお，この手引自体も
-\verb|kuisthesis|を用い，定められた形式に従って作成されているので，必要に応じ
-てソース・ファイル\verb|guide.tex|を参照されたい。
-
-なお、修士論文に関しては、この内容は旧情報工学専攻向けのものである。
-情報学研究科の修士課程学生でこのマクロを利用する者は、各専攻の執筆規定に
-従うこと。
+アブストラクト
 \end{jabstract}
 
 \begin{eabstract}				% 英文梗概
-This guide gives instructions for writing your B.E. or M.E. theses following
-the standard of the Department of Information Science.  The
-standard includes the structure and format which you must obey on writing
-your theses.
-
-This guide also explains how to use a \LaTeX{} style file for theses, named
-\verb|kuisthesis|, with which you can easily produce well-formatted results.
-Since this guide itself is produced with the style file, it will help you to
-refer its source file \verb|guide.tex| as an example.
-
-Note for graduate students: This document is written for students of
-old graduate school of information science, not for graudate school of
-informatics. Writers of master thesis belonging to graduate school
-of informatics must obey rules given by each department.
+To be written
 \end{eabstract}
 
 \tableofcontents
@@ -82,25 +60,34 @@ of informatics must obey rules given by each department.
 
 \section{序論}
 
-ロボットが人間の生活に役立つために、人間のやろうとしていることをいかに助け手伝うかということに関する研究はHuman Robot Interaction(HRI)の分野で大変盛んに行われている。一方でロボットは、人間のやろうとしていることを阻止したり思いとどまらせたちすることで貢献することもある。スーパーで万引きを防ぐ、禁じられた行動を取る人を注意するなどといった仕事をロボットに任せることができるようになれば
+Human Robot Interaction(HRI)の分野において、ロボットが人間のやろうとしていることをいかに助け、手伝い、人間の生活に役立つことができるかということに関する研究は大変盛んに行われている。一方でロボットは、人間のやろうとしていることを阻止したり思いとどまらせたりすることで貢献することもある。スーパーで万引きを発見・防止する、歩きタバコのような公共の場で禁じられた行動を取る人を注意するなどといった仕事をロボットに任せられるようになることを目指した研究も目にすることができる。
 
-一人で帰る夜道……不審者に遭遇しないかと不安になることも多いだろう。そんなとき、一人で帰るよりも二人・複数人で一緒に帰る方が不審者に襲われにくいということは想像に難くない。しかし、いつも一緒に帰ってくれる人がいるとは限らない。その役割をロボットに任せることはできないだろうか。
+本研究ではそのようなテーマの中のひとつとして、不審者からユーザーを守ってくれるようなロボットについて考えたい。
+
+一人で帰宅する途中の夜道では、不審者に遭遇しないかと不安になることも多いだろう。そんなとき、一人で帰るよりも二人・複数人で一緒に帰る方が不審者に襲われにくいということは想像に難くないが、いつも一緒に帰ってくれる人がいるとも限らない。そんなとき、その役割をロボットに任せることはできないだろうか。
 
 現状でも、防犯ブザーや催涙スプレーのように不審者から身を守るためのグッズがあり、それらは広く利用されている。ただこれらは不審者に襲われてしまった後の対策として用いられている面が強い。それとはまた違った方向で、ロボットの存在が前もって犯罪を抑止できるような状況を実現し、ユーザーにより確かな安心感を提供するための一助になればと考える。
+
+では、ロボットがどのように動作すれば不審者に対して犯罪抑止の効果を与えることができるか。容易に思いつきそうな案を述べると、例えばロボットの躯体を大きくしたりいかめしい見た目にしたりすることで視覚的なプレッシャーを与えるという手があるかもしれない。もしくはロボットにスピーカーで音声を発する機能を搭載して、警告の言葉をかけられるようにするという方法もある。警告を発しても解決しないなら防犯ブザーのように大音量の音を再生して周りに知らせたり、自動で110番に電話をかける（もしくはかけるそぶりを見せる）ことで犯罪行動を諦めさせるという段階を踏むこともできる。
+
+これらはある種、不審者に対して直接的な利害交渉を持ちかけることで犯罪行動を抑止しようとしていると言うことができそうである。怪しいことをすると痛い目にあうぞ、周りに知らせるぞ、警察に通報するぞ……といった具合にである。
+
+今回はこのようなアプローチをいったん脇に置き、より間接的で非言語的なコミュニケーションを通じて犯罪行動を抑止することを考えたい。すなわち、直接攻撃的な手段に出るというよりも、ロボットの移動であったり向きの変更であったり、そういった挙動を工夫することにより不審者に対してプレッシャーを与えることができないかということを考える。
+
 
 \section{関連研究}
 関連のある他の研究をあげながら、本研究の立ち位置について考えたい。
 
-まず、人とロボットが同じ空間内にあってそれぞれ行動するときに起こる現象ついての研究というものが数多く存在する。例えば、目的地まで障害物を避けながら人をナビゲートするロボットに関する研究がある\cite{1}。本研究はそのような研究の中の一つと考えることができるだろう。
+まず、人とロボットが同じ空間内にあってそれぞれ行動するときに起こる現象についての研究というものが数多く存在する。例えばM.Shiomiらは、多数の歩行者を回避しながらユーザーを目的地までナビゲートするロボットについて研究を行っている\cite{1}。本研究はそのような研究の中の一種と考えることができるだろう。
 
-さらに、空間を共有する人間に対してロボット良い印象を与えることを目的とした研究が存在する。例えば、展示を見て回る人間を極力邪魔しないようにしつつ案内を必要とする人間に近づくという動作に関する研究\cite{2}などがある。本研究は、これらとは逆に、不審者に対してプレッシャーを与え、犯罪行動を抑止するような動作を追求するものとなる。
+さらにその中で、空間を共有する人間に対してロボット良い印象を与えることを目的とした研究が存在する。例えば、Y.Katoらは展示を見て回る人間を極力邪魔しないようにしつつ案内を必要とする人間に近づくという動作に関する研究\cite{2}を行っている。また、K.Hayashiらは日常的な公共環境において警備員や警察官や店員のような仕事をになったロボットが巡回するときの「親しみやすい」挙動について研究している\cite{3}。
 
-そのような研究として近いものを探したところ、VIPの護衛を目的をして周囲の脅威を最小化する護衛ロボットの研究\cite{3}が存在した。目指しているものは本研究とほぼ同じものであるが、こちらの研究\cite{3}は周囲の人間の位置関係から「脅威度」を定義し、数値化されたそれを最小化するようなロボットの動作を模索するというアプローチであった。対して本研究では、同じような状況で人間が取る行動を観察し、有効なアルゴリズムをヒューリスティックに探すというアプローチを取ることにする。
+一方、本研究はこれらとは逆に、不審者に対してプレッシャーを与えて犯罪行動を抑止するような動作を追求するものとなる。
 
-/* TODO [2],[3]もっと具体的な内容まで書く？ */
+そのような研究として近いものを探したところ、T.S.Bhatiaらの行った研究で、VIPの護衛を目的をして周囲の脅威を最小化する護衛ロボットのアルゴリズムを提案するもの\cite{4}が存在した。目指しているものは本研究とほぼ同じものであるが、こちらの研究\cite{3}は周囲の人間の位置関係から「脅威度」を定義し、数値化されたそれを最小化するようなロボットの動作を模索するというアプローチであった。対して本研究では、同じような状況で人間が取る行動を観察し、典型的な動作をヒューリスティックに探してそれをアルゴリズム化するというアプローチを取ることにする。
 
 \section{対象と問題の設定}
-次の三者を対象とした問題を考える。
+本研究で考えるテーマを、以下の三者を対象とした問題として定義する。
 
 \begin{itemize}
 	\item robot
@@ -108,13 +95,13 @@ of informatics must obey rules given by each department.
 	\item enemy
 \end{itemize}
 
-研究の対象となるロボットをrobot、守られるユーザーをpartner、不審者をenemyと表記する。
+アルゴリズムを考える対象となるロボットをrobot、守られるユーザーをpartner、不審者をenemyと表記する。
 
-robotとpartnerは通常時、目的地まで連れ立って移動するが、enemy（不審者）を検知した際にrobotはpartnerを守る状態に移行する。enemy検知後の状態をprotect mode（護衛状態）、それ以前の状態をnormal mode（通常状態）と呼ぶ。
+robotとpartnerは通常時、目的地まで連れ立って移動しているが、enemyを検知した際にrobotはpartnerを守る状態に移行する。enemy検知後の状態をprotect mode（護衛状態）、それ以前の状態をnormal mode（通常状態）と呼ぶことにする。
 
 /* TODO 図：配置とモードの遷移(1P) */
 
-enemyについては、partnerの所有物を奪おうとしている、危害を加えようとしているなど様々な想定が可能であるが、今回はそれらを総括してひとまずpartnerのいる地点まで近づくという動きをとるものとする。また、enemy検知において、近づいてくる人物が不審者であると判断するためには様々な要素が必要であるだろうが、今回はその判断の中身には触れず、単純に近づいて来るものはenemyであるという扱いをする。
+enemyについては、partnerの所有物を奪おうとしている、危害を加えようとしているなど様々な目的を想定することが可能であるが、今回はそれらを総括してひとまずpartnerのいる地点まで近づくという動きをとるものとする。また、enemy検知において、近づいてくる人物が不審者であると判断するためには様々な要素が必要であるだろうが、今回はその判断の中身には触れず、単純に近づいて来るものはenemyであるという扱いをする。
 
 以上の三者の中において、robotにどのような動きをとらせるのが最適かを考えていく。
 
@@ -134,19 +121,31 @@ enemyについては、partnerの所有物を奪おうとしている、危害�
 
 並んで移動するpartnerとrobotに対し、正面からenemyが近づいて来るケースと後ろから追いかける形で近づいて来るケースを想定した。
 
-/* TODO ビデオのキャプチャ画像(1P程度) */
+
 
 \subsection{考察}
-動画から人間ならば不審者からユーザを守ろうとした時どのような動きをとるかを観察し、アルゴリズムとして落とし込めそうな部分を探した。
-その結果、以下のような動作が有効そうな振る舞いとしてあがった。
+撮影した動画から、人間なら不審者からユーザを守ろうとした時どのような動きをとるか観察し、アルゴリズムとして落とし込むことができそうな部分を探した。
+
+まず正面からenemyが近づいてきてすれ違う形で接触する想定で撮影した動画を観察したところ、以下のような動作が典型的な振る舞いとしてあがった。
+
+/* ビデオ mov006 のキャプチャ画像(1.0P) */
 
 \begin{itemize}
 \item robotは、partnerとenemyを割って入るような位置に移動する
 \item robotは、partnerと一定の距離を保ちながら動く
+\end{itemize}
+
+partnerとenemyのを結んだ直線上に割り込むような形で位置どりpartnerと一定の距離に置きながら移動することで、enemyがpartnerへ突発的な行動を取ることを防止するという狙いがあっての動きだろうと読み取ることができる。
+
+さらにenemyがpartnerの後ろから追いかけるような形で接近する想定で撮影した動画を観察すると、もうひとつ興味深い動きの特徴が見られた。
+
+/* ビデオ mov007 のキャプチャ画像(1.0P) */
+
+\begin{itemize}
 \item robotは、常にenemyの方を向く
 \end{itemize}
 
-partnerとenemyのを結んだ直線上に割り込むような形で位置どり、partnerと一定の距離を取りながら移動することでenemyのpartnerへの動きを妨げるという狙いと、enemyの方を向き続けることでenemyに対してプレッシャーを与える狙いが見て取れた。
+enemyの方を向き続けることでenemyに対してプレッシャーを与える狙いが見て取れた。
 
 
 
@@ -158,16 +157,15 @@ partnerとenemyのを結んだ直線上に割り込むような形で位置ど�
 
 4節で導き出した動きをもとに、ロボットに取らせる動きを表現するためのアルゴリズムを考える。
 
-\subsection{向かうべき位置の決定}
+\subsection{通常状態}
+まずはenemyのいない通常状態について考える。通常状態においてrobotはpartnerの横に並んで移動する。
+これは、partnerの右隣、もしくは左隣のうち近い方を選択し、その位置どりを保持するということになる。
 
 robot, partner, enemyの現在位置をそれぞれ $P_r$, $P_p$, $P_e$ とする。
 
+\subsubsection*{robotの向かうべき位置の決定}
+
 robotが向かうべき地点を$T_r$とし、それぞれの状態で$T_r$がどのように定められるかを考える。
-
-\subsubsection{通常状態}
-
-まずはenemyのいない通常状態について考える。通常状態においてrobotはpartnerの横に並んで移動する。
-これは、partnerの右隣、もしくは左隣のうち近い方を選択し、その位置どりを保持するということになる。
 
 これを式にすると、
 
@@ -179,16 +177,18 @@ T_r = \frac{R(\theta)\bm{v}_p}{|\bm{v}_p|}d + P_p \nonumber
 
 ただし$\bm{v}_p$はpartnerの速度、$R(\theta)$は回転行列、$\theta$は
 
-\begin{eqation}
+\begin{equation}
 \[
   \theta = \begin{cases}
      \frac{\pi}{2} \\
     -\frac{\pi}{2}
-  \end{cases}
-\] \nonumber
-\end{eqation}
+  \end{cases} \nonumber
+\]
+\end{equation}
 
 であり、$|T_r - P_r|$がより小さくなるような値が$\theta$の値として選ばれる。
+
+/* 図 */
 
 また、$d$はrobotとpartnerとの間で保つべき距離である。
 並んで移動すると一口に言っても、どの程度の距離をとって並ぶかでpartnerに与える印象は変わるだろう。近すぎると窮屈に感じるだろうし、遠すぎても並んで移動していると思えなくなってしまう。
@@ -198,13 +198,32 @@ T_r = \frac{R(\theta)\bm{v}_p}{|\bm{v}_p|}d + P_p \nonumber
 d  = r_{normal} \nonumber
 \end{equation}
 
-%\vspace{1.0em}
+\subsubsection*{速度と回転の指定}
 
-\subsubsection{護衛状態}
+以上によって定められた$T_r$を用いて、robotに設定する速度$\bm{v}_R_{des}$は、以下の通りになる。
+\begin{equation}
+	\bm{v}_R_{des} = W_r (T_r - P_r) \nonumber
+\end{equation}
+
+/* W_R の説明 */
+
+また、robotの向く方向$\psi_r_{des}$は、以下の式により表される。
+
+\begin{equation}
+	\psi_r_{des} = \frac{\bm{v}_p}{|\bm{v}_p|} \nonumber
+\end{equation}
+
+
+\subsection{護衛状態}
 
 続いて、enemyを検知した後の護衛状態におけるrobotの動きについて考える。
+$P_r$, $P_p$, $P_e$, $T_r$の定義は通常状態の時と同様である。
 
-このときの$T_r$を式にすると、
+\subsubsection*{robotの向かうべき位置の決定}
+
+護衛状態でのrobotは、patnerのいる地点からenemyのいる地点への方向に$d$だけ離れた点に移動させる。
+
+このとき$T_r$を式にすると、
 
 \begin{equation}
 T_r = \frac{(P_e - P_p)}{|P_e - P_p|}d + P_p \nonumber
@@ -212,8 +231,9 @@ T_r = \frac{(P_e - P_p)}{|P_e - P_p|}d + P_p \nonumber
 
 のようになる。
 
-$d$は先ほどと同じく、robotとpartnerとの間で保つべき距離とする。
-すなわち、$T_r$はpatnerのいる地点からenemyのいる地点への方向に$d$だけ離れた点を表している。
+$d$は先ほどと同じく、robotとpartnerとの間で保つべき距離である。
+
+/* 図 */
 
 $d$については以下の式で表される。
 
@@ -221,31 +241,30 @@ $d$については以下の式で表される。
 d  = r_{protect} \frac{v_r_{max}}{max(|v_e_{\parallel} - v_p_{\parallel}|,v_r_{max})} \nonumber
 \end{equation}
 
-さらに、$r_{protect}$は$r_{social}$と対になる値で
+$r_{protect}$は$r_{normal}$と対になる値で、
 
-$v_e_{\parallel}$の説明
+/**/
 
-/* TODO$ $v_e_{\parallel}$, $v_p_{\perp}$とかの説明用図 */
+/* $v_e_{\parallel}$, max()周り の説明 */
 
+/* TODO $v_e_{\parallel}$, $v_p_{\perp}$とかの説明用図 */
 
+\subsubsection*{速度と回転の指定}
 
-
-\subsection{速度の指定}
-
-また、robotの向く方向$\psi_r_{des}$を、以下の式により表す。
-
-\begin{equation}
-	\psi_r_{des} = \frac{(P_p - P_r)}{|P_p - P_r|} \nonumber
-\end{equation}
-
-以上の条件において、robotに設定する速度$\bm{v}_R_{des}$は、以下の通りになる。
+以上によって定められた$T_r$を用いて、robotに設定する速度$\bm{v}_R_{des}$は、以下の通りになる。
 \begin{equation}
 	\bm{v}_R_{des} = W_r (|v_e_{\perp} - v_p_{\perp}|+1)(T_r - P_r) \nonumber
 \end{equation}
 
 $v_e_{\parallel}$の説明
 
-/* 図 (0.6p)*/
+また、robotの向く方向$\psi_r_{des}$は、以下の式により表される。
+
+\begin{equation}
+	\psi_r_{des} = \frac{(P_e - P_r)}{|P_e - P_r|} \nonumber
+\end{equation}
+
+
 
 
 
@@ -289,32 +308,94 @@ package間で交わされる通信をROSではmessageと呼ぶ。packageはmessa
 \vspace{1.0em}
 
 \subsubsection*{速度の指定}
-RobovieR3は"前後左右ななめのあらゆる方向へ移動が可能となる「全方位移動機構（オムニホイール）」"を搭載している。
+RobovieR3は前後左右ななめのあらゆる方向へ移動が可能となる「全方位移動機構（オムニホイール）」を搭載している。
 この移動の方向・速さを指定するために/cmd\_vel というmessageを発信する。/cmd\_vel はX軸・Y軸方向への平行移動とZ軸周りの回転を数値で指定できるようになっており、これにより5節で述べたアルゴリズムで導出した速度を駆動部分へ伝える。
 
 /* TODO センサやモジュールの図(0.4p) */
 
 \subsection{実験用移動制御モジュール}
 
-本研究で考案するロボットの移動を実験するために、移動制御モジュールをROSのpackageとして実装して組み込む。3節で述べたように、このモジュールは以下の通り、2つの状態とその間の遷移によって構成される。
+本研究で考案するロボットの移動を実験するために、移動制御モジュールをROSのpackageとして実装して組み込む。
 
-\subsubsection*{通常状態}
-robotはpartnerに並んで移動する。具体的な動作は5節にて述べた通りである。
-\subsubsection*{不審者検知}
-enemyがpartnerに害をなしうると判断される状況で、robotは通常状態から護衛状態に以降する。
-\subsubsection*{護衛状態}
-robotはenemyからpertnerを守るための動きを取る。
+\vspace{1.0em}
 
-% \begin{lstlisting}
-% \end{lstlisting}
+\subsubsection*{状態遷移}
+3節で述べたように、このモジュールは以下の通り、2つの状態とその間の遷移によって構成される。
+\begin{itemize}
+	\item 通常状態ではrobotはpartnerに並んで移動する（具体的な動作は5.1節にて述べた通り）。
+	\item 不審者検知時、つまりenemyがpartnerに害をなしうると判断された時、通常状態から護衛状態に移行する。
+	なお、今回は不審者検知のトリガーを、「partnerの半径7メートル以内に侵入した人物をenemyとみなして護衛状態に入る」という大変シンプルなものにしている。
+	\item 護衛状態ではenemyからpertnerを守るための動きを取る（具体的な動作は5.2節にて述べた通り）。
+\end{itemize}
 
-/*クラス分けのくだり*/
+\vspace{1.0em}
 
-/*人間の速度の取得のくだり*/
+\subsubsection*{実装に関するmisc.}
 
-/*避けるくだり*/
+ROSのpackageはC++やPythonなどの言語で書くことができる。本研究ではPythonを用いて書く。
 
+以下に、アルゴリズムには含まれないが実装上工夫した点について述べておく。
 
+\begin{itemize}
+\item robot, partner, enemy の三者を扱いやすくするためのSubjectクラスを作成した。クラスの仕様は以下の擬似コードのようになっている。
+
+\begin{lstlisting}
+class Subject:
+	def __init__(self):
+		# attributes
+		self.pose  = Pose()
+		self.cache = None
+		self.vel   = Vector()
+
+	# methods
+	def calc_vel(self):
+		# processing...
+
+	def gap_to(self,other_subject) :
+		# processing..
+		return gap # : float
+
+	def vector_to(self,other_subject):
+		# processing...
+		return vector_to # : Vector
+\end{lstlisting}
+
+Vectorは$(x,y)$の形で二つ組のfloat型値が格納できるクラスである。
+Poseは、Subjectの現在位置を表すVectorとSubjectの向いている方向を表すfloat型値を格納できるクラスである。
+
+位置同定モジュールからrobot自身やpartner、enemyの位置情報を受け取ったら、その情報がpose属性にPoseオブジェクトとして格納され、このposeの情報を元にrobotの動作を決定する。
+
+メソッドgap\_to()は引数として別のSubjectオブジェクトを取り、それぞれそのSubjectとの距離（float型）を返す。vector\_to()も引数として別のSubjectオブジェクトを取り、こちらはそのSubjectと自身の位置を結んでできるVectorを返す。
+
+属性cache, vel とメソッドcalc\_vel()に関しては次の項目で述べる。
+
+\vspace{1.0em}
+
+\item アルゴリズムの実行にはpartnertとenemyの速度の取得が必要である。そこでpartnerとenemyに関しては、一定時間$\Delta T$ごとにメソッドcalc\_cel()を呼び出して自身の速度を算出する処理を行う。処理の内容は以下の擬似コードのようになっている。
+
+\begin{lstlisting}
+def calc_vel(self):
+	self.vel.set(self.pose - self.cache)
+	self.cache.set(self.pose)
+\end{lstlisting}
+
+Subjectオブジェクトのcache属性に$\Delta T$ぶん昔の位置をPoseオブジェクトとして保存しておいて、それを現在位置と比較して速度を算出する。速度の算出が終わったらcache属性の値を現在の位置に更新する、という流れになっている。
+
+\vspace{1.0em}
+
+\item robotがアルゴリズムによって定められた$T_r$へ向かう際、経路上でpartnerとの距離が算出したdを下回ってしまう場合がある。これはrobotとparterが衝突する恐れがあることを意味し危険であるので、それを回避する処理を加える。
+
+\begin{lstlisting}
+if(robot.gap_to(partner) < d):
+	modifier_vector = w * partner.vector_to(robot)
+	v_r_des += modifier_vector
+\end{lstlisting}
+
+$\bm{v}_r_{des}$を意味する変数v\_r\_desに対して、robotがpartnerから遠ざかり大回りで$T_r$に向かうように修正を加える。
+
+/* 図 */
+
+\end{itemize}
 
 %===============================================================================
 
@@ -326,7 +407,7 @@ robotはenemyからpertnerを守るための動きを取る。
 
 \subsection{MORSE}
 
-本研究ではシミュレータとして、morse simulator\footnote{\url{https://www.openrobots.org/morse/doc/stable/morse.html}}を使用する。MORSEは学術ロボット用の汎用シミュレータで、Blender\footnote{\url{https://www.blender.org/}}を内包しており3Dシミュレーション得意とする。
+本研究ではシミュレータとして、MORSE Simulator\footnote{\url{https://www.openrobots.org/morse/doc/stable/morse.html}}を使用する。MORSEは学術ロボット用の汎用シミュレータで、Blender\footnote{\url{https://www.blender.org/}}を内包しており3Dシミュレーションを得意とする。
 
 MORSEはPythonで書かれており、シミュレーションシナリオや設定もPythonスクリプトによって記述することができる。また、ROSとの親和性が高くシミュレーション上のセンサ情報や配置したオブジェクトの位置情報などをROSのmessageとして取得することができるので、ROSで実装したものをほぼそのまま動作させることが可能である。
 
@@ -345,7 +426,7 @@ MORSEはPythonで書かれており、シミュレーションシナリオや設
 
 これらの結果をキャプチャした画像を以下に掲載する。
 
-/* TODO キャプチャ画像(3pくらい使ったれ！！ ｶﾞﾊﾊ！) */
+/* TODO キャプチャ画像(1.0P \times 3) */
 
 % \subsection{実験室実験}
 % シミュレーション上で実装したアルゴリズムをRobovie-R3の実機にインストールし、実験室内で動作させた(い)。
@@ -359,17 +440,28 @@ MORSEはPythonで書かれており、シミュレーションシナリオや設
 
 \section{考察}
 
-\subsection{提案手法について}
-/* TODO  */ % 唯一主観的に書いていいところ
+シミュレーションを実行した結果、予備実験で撮影した動画で見られた典型的な挙動をある程度再現できていたと言えるだろう。
 
-\subsection{今後の課題}
+ただ、動画の動きが再現できていたことで当初の目的であるところの犯罪行動の抑止に効果があったかどうかを確かめるためには、更なる実験と検証が必要である。
+ユーザーの安心感の度合いであったり不審者が犯罪を思いとどまる可能性・警戒心の度合いといったものを計測することができれば良いが、シミュレーション上ではやはり難しい。今回製作したモジュールを実機に組み込み、現実上の人間と一緒に動かしてみることで、アンケートやインタビューによる効果を検証ができるようになる。
 
-（ユーザの安心感・不審者側の警戒心といったものをシミュレーションでどう測る？）
+また、アルゴリズム中には様々なパラメータが存在した。通常状態・防衛状態それぞれのrobotとpartner間の距離$r_{normal}$・$r_{protect}$などである。今回はこれらを動画の動きを再現することを念頭に置いて手動で設定したのだが、これらの値を様々に変えることでより効果の高い動作アルゴリズム、人間の動きよりも効果的な動作アルゴリズムを得られる可能性もある。
 
-/* TODO */
+さらに、今回は決まった範囲に入ってきたら防衛状態に映るというような、ごくシンプルな仕様にした不審者感知の条件だったが、これもより良い条件を模索することでアルゴリズムを効果的なものにできる。
+
+/* 注：めちゃくちゃ弱気な考察になってしまいました・・・というかほとんどがfuture work */
+
 
 \section{結論}
-/* TODO 全体のおさらい */
+本研究では、一緒に移動するユーザーを不審者から守ってくれるようなロボットをテーマに、その取るべき動作を考えた。
+
+序論でも触れたことになるが、本研究はある種、人間がやろうとしていることを押しとどめるという類のものであった。人間のやりたいことを手伝うロボットも、本研究で扱ったようなロボットも、人々の役に立つために考えられているということは同じであるが、実現するためにはそれぞれ質の異なる難しさが存在すると考えている。
+
+人間とロボットが協力して何かタスクをこなすことを考えた場合、ロボットは人間にとって、乱暴な言い方をすると「道具の延長」に近い役割を持っていると言える。もちろん、ロボットがまるで人間のように人間とコミュニケーションを取れるようになることは、それまでと全く違うタスクの進め方が可能になるということである。それを単純に道具と同一視するのは全くのナンセンスであるが、一方でその役割は本研究で扱ったようなロボットが人間にもたらすものとは異質なものであるということは無視できない。
+
+ロボットが例えば警備員や監視員のような、人間の悪い行いを咎めたり諌めたり、未然に抑止したりするような仕事を担えるようになるためには、人間がロボットに対してモラルを払うべき対象だとみなすようにならなければならないという話を研究室で聞いたのが非常に印象的であった。人が監視カメラの前で悪さをしないのは、監視カメラに罪悪感を抱くからではなく監視カメラの裏にいる人間に罪悪感を抱くからだ。
+
+いつかロボットが人間と限りなく近い挙動を取るようになったとして、人間がそのロボットを、人間と平等に扱うようになるのかどうか
 
 \section{謝辞}
 本研究に取り組むにあたり、多大なるご指導を賜りました京都大学大学院情報学研究科の神田崇行教授、技術的な助言をいただきました同研究科のYuyi Liu特定研究員に深くお礼を申し上げます。また、日頃より様々なご協力をいただきました、神田研究室の皆様に感謝の意を申し上げます。
@@ -377,6 +469,7 @@ MORSEはPythonで書かれており、シミュレーションシナリオや設
 \begin{thebibliography}{3}
 \bibitem{1} Masahiro Shiomi, Francesco Zanlungo, Kotaro Hayashi, Takayuki Kanda: Towards a Socially Acceptable Collision Avoidance for a Mobile Robot Navigating Among Pedestrians Using a Pedestrian Model, International Journal of Social Robotics(IJSR), Vol.6, Issue 3 ,pp.443-455, 2014.
 \bibitem{2} Yusuke Kato, Takayuki Kanda, Hiroshi Ishiguro, May I help you? - Design of human-like polite approaching behavior -, ACM/IEEE international conference on Human-robot interaction (HRI 2015), pp. 35-42, 2015.
-\bibitem{3} Taranjeet Singh Bhatia, Gürkan Solmaz, Damla Turgut, Ladislau Bölöni: Controlling the Movement of Robotic Bodyguards for Maximal Physical Protection, FLAIRS Conference(2016)
+\bibitem{3} Kotaro Hayashi, Masahiro Shiomi, Takayuki Kanda, Norihiro Hagita, Friendly Patrolling: A Model of Natural Encounters, The 2011 Robotics: Science and Systems Conference (RSS 2011), 2011.
+\bibitem{4} Taranjeet Singh Bhatia, Gürkan Solmaz, Damla Turgut, Ladislau Bölöni: Controlling the Movement of Robotic Bodyguards for Maximal Physical Protection, FLAIRS Conference(2016)
 \end{thebibliography}
 \end{document}

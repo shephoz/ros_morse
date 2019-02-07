@@ -1,3 +1,5 @@
 tex/*
 !tex/*.tex
 src/*.pyc
+.DS_Store
+*/.DS_Store
