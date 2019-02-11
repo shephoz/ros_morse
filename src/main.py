@@ -40,15 +40,15 @@ RATE = 0.3
 class Naito_node:
 
     def __init__(self):
-        self.vel_pub   = rospy.Publisher('/xbot/cmd_vel', Twist, queue_size=1)
+        self.vel_pub   = rospy.Publisher('/xbot/cmd_vel', Twist, queue_size=1) # /velocity_to_track : TwistStamped frame_id="map"
         self.rml_pub   = rospy.Publisher('/naito/rml', String, queue_size=1)
         # self.goal_pub  = rospy.Publisher('/naito/goal',   PoseStamped, queue_size=10)
         # self.human_pub = rospy.Publisher('/naito/human',  PoseStamped, queue_size=10)
         # self.enemy_pub = rospy.Publisher('/naito/enemy',  PoseStamped, queue_size=10)
 
         #rospy.Subscriber('/pose_6d',   PoseWithCovarianceStamped, self.robot_callback)
-        rospy.Subscriber('/xbot/odom',   Odometry,       self.robot_callback)
-        rospy.Subscriber('/pedestrians', PedestrianData, self.pedestrian_callback)
+        rospy.Subscriber('/xbot/odom',   Odometry,       self.robot_callback)      # => /pose_6d
+        rospy.Subscriber('/pedestrians', PedestrianData, self.pedestrian_callback) # => /human_tracked_l2 : id変わる
         rospy.Subscriber('/scan',        LaserScan,      self.scan_callback)
 
         self.robot = Subject()
