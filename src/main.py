@@ -21,6 +21,8 @@ from   sensor_msgs.msg import LaserScan
 from rosgraph_msgs.msg import Clock
 
 from layer2.msg import HTEntityList
+from layer2.msg import HTEntity
+from std_msgs.msg import Header
 
 
 from std_msgs.msg import String
@@ -36,23 +38,25 @@ AVOIDING_SLOW_DOWN_RATE = 0.5
 NEAR_ROT  = math.pi / 12 # [rad]
 NEAR_DIS  = 0.1 # [m]
 
-SPD_ANG = math.pi / 1
-SPD_LIN = 1.2
+SPD_ANG = math.pi / 6
+SPD_LIN = 0.8
 
 RATE = 0.3
 
 class Naito_node:
 
     def __init__(self):
+        #self.vel_pub   = rospy.Publisher('/valocity_to', TwistStamped, queue_size=1)
         self.vel_pub   = rospy.Publisher('/xbot/cmd_vel', Twist, queue_size=1)
-        self.rml_pub   = rospy.Publisher('/naito/rml', String, queue_size=1)
+        #self.rml_pub   = rospy.Publisher('/naito/rml', String, queue_size=1)
 
-        rospy.Subscriber('/xbot/odom',   Odometry,       self.robot_callback)
-        rospy.Subscriber('/pedestrians', PedestrianData, self.pedestrian_callback)
-        #rospy.Subscriber('/pose_6d',   PoseWithCovarianceStamped, self.robot_callback)
-        #rospy.Subscriber('/human_tracked_l2', HTEntityList , self.pedestrian_callback)
+        # rospy.Subscriber('/xbot/odom',   Odometry,       self.robot_callback)
+        # rospy.Subscriber('/pedestrians', PedestrianData, self.pedestrian_callback)
+        rospy.Subscriber('/pose_6d',   PoseWithCovarianceStamped, self.robot_callback)
+        rospy.Subscriber('/human_tracked_l2', HTEntityList , self.humantrack_callback)
         # rospy.Subscriber('/scan',        LaserScan,      self.scan_callback)
         rospy.Subscriber('/clock',       Clock,          self.clock_callback)
+
 
         self.robot = Subject()
         self.human = Subject()
@@ -60,8 +64,10 @@ class Naito_node:
 
         self.human_macro_vel = Vector()
 
-        self.goal       = Pose()
-        self.goal_cache = Pose()
+        self.protect_mode = False
+
+        self.goal       = None
+        self.goal_cache = None
         self.reached       = False
         self.turn_to_avoid = 0
 
@@ -69,6 +75,13 @@ class Naito_node:
 
         self.clock_cache = None
 
+
+    def is_ready(self):
+        return (not self.robot.cache is None
+        and not self.human.cache is None
+        and not self.enemy.cache is None
+        and not self.human.id is None
+        and not self.enemy.id is None)
 
     def clock_callback(self,data):
         sec = data.clock.secs
@@ -85,6 +98,7 @@ class Naito_node:
                 print( "robot{}".format(naito.robot) )
                 print( "human{}".format(naito.human) )
                 print( "enemy{}".format(naito.enemy) )
+                print( "nextv{}".format(naito.next_vel))
                 print("\n")
 
                 self.clock_cache = sec*10+dsec
@@ -95,17 +109,37 @@ class Naito_node:
             self.robot.update_pose(data.pose.pose)
 
 
+    def humantrack_callback(self,data):
+        if(self.human.id is None):
+            human = data.list[0]
+            enemy = data.list[1]
+            if(Pose(enemy.x,enemy.y,0.0).gap_to(self.robot.pose) < Pose(human.x,human.y,0.0).gap_to(self.robot.pose)):
+                enemy,human = human,enemy
+            self.human.id = human.id
+            self.enemy.id = enemy.id
+        for entity in data.list:
+            if(entity.id == self.human.id):
+                self.human.update_pose(Pose(entity.x,entity.y,0.0))
+            if(entity.id == self.enemy.id):
+                self.enemy.update_pose(Pose(entity.x,entity.y,0.0))
+        if(self.is_ready()):
+            self.check_protect_mode()
+            self.set_goal()
+
+
+
+
+
+
     def pedestrian_callback(self,data):
-
-        #print(data)
-
         for odom in data.odoms:
             if (odom.child_frame_id in ["Dummy1", "Pedestrian_female 42"]):
                 self.human.update_pose(odom.pose.pose)
             if (odom.child_frame_id in ["Scripted Human", "Pedestrian_male 02"]):
                 self.enemy.update_pose(odom.pose.pose)
-        self.check_protect_mode()
-        self.set_goal()
+        if(self.is_ready()):
+            self.check_protect_mode()
+            self.set_goal()
 
 
     # def scan_callback(self,data):
@@ -173,9 +207,9 @@ class Naito_node:
                 (self.human.path_to(self.enemy).normalize() * d_protect) + self.human.pose.vec,
                 self.robot.path_to(self.enemy).rad
             )
-
         # check goal was updated
-        if self.goal.is_moved(self.goal_cache, 0.05):
+        if self.goal_cache is None or self.goal.is_moved(self.goal_cache, 0.05):
+            self.goal_cache = Pose()
             self.goal_cache.set(self.goal)
             self.reached = False
 
@@ -199,16 +233,31 @@ class Naito_node:
         v_r_des_modified = v_r_des + (p_r.normalize() * max(avoid_meter, 0.0))
 
         v_r_roted = v_r_des_modified.rotate(-(self.robot.pose.yaw))
-        self.next_vel.linear.x = v_r_roted.x
-        self.next_vel.linear.y = v_r_roted.y
-        # self.next_vel.linear.x = 0.0
-        # self.next_vel.linear.y = 0.0
+
+
+        if(True):
+            if(v_r_roted.x > 0):
+                v_r_roted.x = min(v_r_roted.x, SPD_LIN)
+            if(v_r_roted.x < 0):
+                v_r_roted.x = max(v_r_roted.x, -SPD_LIN)
+            if(v_r_roted.y > 0):
+                v_r_roted.y = min(v_r_roted.y, SPD_LIN)
+            if(v_r_roted.y < 0):
+                v_r_roted.y = max(v_r_roted.y, -SPD_LIN)
+
+            self.next_vel.linear.x = v_r_roted.x
+            self.next_vel.linear.y = v_r_roted.y
+        else:
+            self.next_vel.linear.x = 0.0
+            self.next_vel.linear.y = 0.0
+
+
         self.next_vel.angular.z = self.attitude(v_r_des.rad,self.goal.yaw)
 
         if(v_r_des.norm() < NEAR_DIS):
             self.reached = True
-        else:
-            print("not reached : {} gap={}".format(v_r_des,v_r_des.norm()))
+        # else:
+        #     print("not reached : {} gap={}".format(v_r_des,v_r_des.norm()))
 
     def attitude(self,f_r_des_normal,f_r_des_protect):
         f_r_des = f_r_des_protect if self.protect_mode else f_r_des_normal
@@ -233,16 +282,117 @@ class Naito_node:
 if __name__ == "__main__":
     rospy.init_node('naito', anonymous=True)
     naito = Naito_node()
-    r = rospy.Rate(30)
+    r = rospy.Rate(10)
+    listener = tf.TransformListener()
+    #rospy.sleep(100)
+    # listener.waitForTransform("/pedestrians","/human_tracked_l2",rospy.Time(),rospy.Duration(4.0))
+
+
+
+
+
+    tracked_pub = rospy.Publisher('/human_tracked_l2', HTEntityList, queue_size=2)
+
+    i=0
+    header = Header()
+    header.seq = i
+    header.stamp = rospy.Time.now()
+    header.frame_id = "map"
+
+    htelist = HTEntityList()
+    htelist.header = header
+    htelist.list.append(HTEntity())
+    htelist.list.append(HTEntity())
+
+    htelist.list[0].header = header
+    htelist.list[0].id = 1
+    htelist.list[0].unique_id = -1
+    htelist.list[0].type = 0
+    htelist.list[0].x = -20.3821392059
+    htelist.list[0].y = 0.953898787498
+    htelist.list[0].z = 1.66053318977
+    htelist.list[0].body_orientation = 3.06264400482
+    htelist.list[0].motion_direction = 3.06264400482
+    htelist.list[0].velocity = 0.0554296225309
+    htelist.list[0].head_orientation = 3.06264400482
+    htelist.list[0].is_speaking = False
+    htelist.list[0].option_fields = ''
+    htelist.list[0].k2body = ''
+
+    htelist.list[1].header = header
+    htelist.list[1].id = 2
+    htelist.list[1].unique_id = -1
+    htelist.list[1].type = 0
+    htelist.list[1].x = -30.2448654175
+    htelist.list[1].y = 0.480877876282
+    htelist.list[1].z = 1.79357945919
+    htelist.list[1].body_orientation = -0.322182565928
+    htelist.list[1].motion_direction = -0.322182565928
+    htelist.list[1].velocity = 0.213831529021
+    htelist.list[1].head_orientation = -0.322182565928
+    htelist.list[1].is_speaking = False
+    htelist.list[1].option_fields = ''
+    htelist.list[1].k2body = ''
+    tracked_pub.publish(htelist)
 
     while not rospy.is_shutdown():
-        if(
-            not naito.robot.cache is None
-            and not naito.human.cache is None
-            and not naito.enemy.cache is None
-        ):
+        if (i<=1200):
+            header = Header()
+            header.seq = i
+            header.stamp = rospy.Time.now()
+            header.frame_id = "map"
+
+            htelist = HTEntityList()
+            htelist.header = header
+            htelist.list.append(HTEntity())
+            htelist.list.append(HTEntity())
+
+            htelist.list[0].header = header
+            htelist.list[0].id = 1
+            htelist.list[0].unique_id = -1
+            htelist.list[0].type = 0
+            htelist.list[0].x = -20.3821392059
+            htelist.list[0].y = 0.953898787498
+            htelist.list[0].z = 1.66053318977
+            htelist.list[0].body_orientation = 3.06264400482
+            htelist.list[0].motion_direction = 3.06264400482
+            htelist.list[0].velocity = 0.0554296225309
+            htelist.list[0].head_orientation = 3.06264400482
+            htelist.list[0].is_speaking = False
+            htelist.list[0].option_fields = ''
+            htelist.list[0].k2body = ''
+
+            htelist.list[1].header = header
+            htelist.list[1].id = 2
+            htelist.list[1].unique_id = -1
+            htelist.list[1].type = 0
+            htelist.list[1].x = -30.2448654175
+            htelist.list[1].y = 0.480877876282
+            htelist.list[1].z = 1.79357945919
+            htelist.list[1].body_orientation = -0.322182565928
+            htelist.list[1].motion_direction = -0.322182565928
+            htelist.list[1].velocity = 0.213831529021
+            htelist.list[1].head_orientation = -0.322182565928
+            htelist.list[1].is_speaking = False
+            htelist.list[1].option_fields = ''
+            htelist.list[1].k2body = ''
+            tracked_pub.publish(htelist)
+            i= i+1
+        if(naito.is_ready() and not naito.goal is None):
             naito.set_next_vel()
             naito.vel_pub.publish(naito.next_vel)
+
+
+
+
+        # try:
+        #     now = rospy.Time.now()
+        #     listener.waitForTransform("/pedestrians","/human_tracked_l2",now,rospy.Duration(3.0))
+        #     (trans,rot) = listener.lookupTransform("/pedestrians","/human_tracked_l2",now)
+        #     print(trans)
+        #     print(rot)
+        # except:
+        #     print("transform error")
 
         try:
             r.sleep()

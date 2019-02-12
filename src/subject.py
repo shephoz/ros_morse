@@ -6,6 +6,7 @@ class Subject:
     # - pose  : Pose
     # - cache : Pose
     # - vel   : Vector
+    # - id    : int
     # methods
     # - update_pose(pose : Pose) -> pose.set()
     # - calc_vel()
@@ -19,9 +20,10 @@ class Subject:
         self.pose  = Pose()
         self.cache = None
         self.vel   = Vector()
+        self.id    = None
 
     def __str__(self):
-        return "{} - {} - {}".format(self.pose, self.cache, self.vel)
+        return "{} - {} - {} : {}".format(self.pose, self.cache, self.vel, self.id)
 
     def update_pose(self,pose):
         self.pose.set(pose)
