@@ -25,13 +25,12 @@ class Subject:
 
     def update_pose(self,pose):
         self.pose.set(pose)
-        self.calc_vel()
 
     def calc_vel(self):
         if(self.cache is None):
             self.cache = Pose()
             self.cache.set(self.pose)
-        if(self.pose.is_moved(self.cache)):
+        if(True or self.pose.is_moved(self.cache)):
             self.vel.set(self.pose.vec.path_from(self.cache.vec))
             self.cache.set(self.pose)
 
