@@ -40,10 +40,10 @@
 \begin{document}
 \maketitle
 
-\begin{jabstract}				% 和文梗概
-夜道を一人で帰らなければならない時などに、不審者からユーザーを守ってくれるようなロボットについて考える。そのようなロボットを実現するために、移動の仕方や姿勢の取り方で不審者にプレッシャーを与え、犯罪行為を抑止させられるロボットを目指す。
+\begin{jabstract}
+夜道を一人で帰らなければならない時などに、不審者からユーザーを守ってくれるようなロボットの実現について考える。ロボットがユーザーを不審者から守るためにはどのような設計をすれば良いのだろうか。様々な発想が考えられるが、本研究では移動の仕方や姿勢の取り方で不審者にプレッシャーを与え、犯罪行為を抑止させられるロボットを目指す。
 
-まず、人間が同様のタスクを実行するとしたらどのようにするのか、ということを把握するため、予備実験としてロールプレイした物をビデオに撮影し、それを観察した。その結果、以下のような特徴的な動きがみられた。
+まず、人間が同様のタスクを実行するとしたらどのようにするのか、ということを把握する。予備実験としてロボット、ユーザー、不審者をそれぞれロールプレイした様子をビデオに撮影した。その際の状況として、前から不審者が近づいて来てすれ違うような形や後ろから不審者が追いかけるように接近する形を想定した。それを観察したその結果、以下のような特徴的な動きがみられた。
 
 \begin{itemize}
 \item ロボットは、ユーザーと不審者を割って入るような位置に移動する
@@ -51,41 +51,45 @@
 \item ロボットは、常に不審者の方を向く
 \end{itemize}
 
-ユーザーと不審者を結んだ線上に割り込むような場所に位置どり、ユーザーを一定の距離に置きながら移動することで、不審者がユーザーへ突発的な行動を取ることを防止するという狙いがあっての動きだろうと読み取ることができる。また、不審者の方を向き続けることで不審者に対してプレッシャーを与える狙いが見て取れた。
+ユーザーと不審者の間に割り込むような場所に位置どり、ユーザーを一定の距離に置きながら移動することで、不審者がユーザーへ突発的な行動を取ることを防止するという狙いがあるのだろうと読み取ることができる。また、不審者の方を向き続けることで不審者に対してプレッシャーを与える狙いが見て取れた。
 
 そして、これらの動作を実現するためのアルゴリズムを考案した。アルゴリズムはユーザーと並んで移動する通常状態と、不審者を検知したのちに上記の動作を実行する護衛状態に分かれている。ユーザーおよび不審者の位置情報を取得し、それを元にロボットの向かうべき地点と向くべき方向を算出する。
-また、ユーザーとロボットの間に空いている距離など、通常状態か護衛状態かで変わってくる値をパラメータとして導入し、自然な動作が再現できるようにする。
+具体的には、向かうべき地点は通常状態ではユーザーの右または左、護衛状態ではユーザーと不審者を結んだ線上の点となる。
+また、ユーザーとロボットの間で空けるべき距離など、通常状態か護衛状態かで変わってくる値をパラメータとして導入し、自然な動作が再現できるようにする。
 
-さらに、このアルゴリズムを実際のロボットに実行させるために、日常環境上での実証実験に優れた移動性能をもつRobovie R3とロボット用プラットフォームROSを想定し、ROSのpackageを製作した。
+さらに、このアルゴリズムを実際のロボットに実行させるために、日常環境上での実証実験に優れた移動性能をもつRobovie R3を想定した実装のためのシステムを考案した。自己位置同定、及びユーザーや不審者の位置の把握の全方向LiDAR測位ユニットであるVelodyneを用い、Robovie R3及びVelodyneをロボット用プラットフォームROSにより制御する。位置情報及び、アルゴリズムを記述したスクリプトを含めたROSのpackageを製作した。
 
-その上で、製作したROS packageを学術ロボット用の汎用シミュレーターであるMORSE Simulatorの上で実行し、スクリプトによって動作を設定したユーザーと不審者の中でロボットがどのように動作するかを試した。その結果、ユーザーと不審者の間に割り込む様子や不審者の方を向き続ける様子など、ビデオで見られた典型的な動きが見られ、アルゴリズムが人間の挙動を再現できているようであるとわかった。
+製作したROS packageを学術ロボット用の汎用シミュレーターであるMORSE Simulatorの上及び実際のロボット上で実行し、スクリプトによって動作を設定したユーザーと不審者の中でロボットがどのように動作するか試した。
+シミュレーターでは、予備実験のビデオと同様に、前から接近、後ろから接近、加えて斜め後ろからなど数パターンの想定で実行し、その結果、ユーザーと不審者の間に割り込む様子や不審者の方を向き続ける様子など、予備実験のビデオで見られた典型的な動きが見られた。またロボットでの実験においては、不審者が様々に動き回ったところ、ロボットがまるでバスケットボールのブロックのような動きでユーザーを守ろうとする動きが見られた。以上のように、アルゴリズムが人間の挙動を再現できていることを確かめることができた。
 
-本研究でビデオで見られた特徴的な動きをある程度再現することはできたものの、それが犯罪を抑止するという狙いのもとで最適な動きだったのかということを検証することが今後の課題と言えるだろう。そして、ユーザーの安心感、不審者の警戒心といった物をアンケートやインタビューで定量的に把握することができれば、アルゴリズム内のパラメータを様々に変更した上でそれを計測したり、アルゴリズム自体を改良することで、より良い解決法を導き出すことができると考える。
+本研究で、不審者から守るというタスクを実行しようとするときの人間がとる特徴的な動きをある程度再現することができた。ただ、それが犯罪を抑止するという狙いのもとで最適な動きだったのかを検証することが今後の課題と言えるだろう。そして、ユーザーの安心感、不審者の警戒心といった物をアンケートやインタビューを通して定量的に把握することができれば、アルゴリズム内のパラメータを様々に変更した上でそれを計測したり、アルゴリズム自体を改良することで、より良い解決法を導き出すことができると考える。
 \end{jabstract}
 
-\begin{eabstract}				% 英文梗概
-The subject of this study is a robot that would protect its user from suspicious individuals.
-In order to implement such a robot, we will focus on having the robot execute a motion and attitude which would intimidate the suspicious person, and prevent them from committing mischief.
+\begin{eabstract}
+	The subject of this study is a robot that would protect its user from suspicious individuals.
+	In order to implement such a robot, we will focus on having the robot execute a motion and attitude which would intimidate the suspicious person, and prevent them from committing mischief.
 
-First of all, I decided to grasp how human beings can perform the task. I took a movie of three collaboators that play the roles of the guardian robot, the user, and the suspicious person. From that movie, I found out the following typical guarding movements that the robot could execute:
+	First of all, we decided to grasp how human beings can perform the task. We took a movie of three collaboators that play the roles of the guardian robot, the user, and the suspicious person. From that movie, we found out the following typical guarding movements that the robot could execute:
 
-\begin{itemize}
-\item the robot enters the space between the user and the suspicious person for interposition,
-\item the robot moves while preserving a fixed distance with the user,
-\item the robot always faces towards the suspicious person.
-\end{itemize}
+	\begin{itemize}
+	\item the robot enters the space between the user and the suspicious person for interposition,
+	\item the robot moves while preserving a fixed distance with the user,
+	\item the robot always faces towards the suspicious person.
+	\end{itemize}
 
-Moving in between the user and the suspicious person is a way to prevent him/her from taking sudden and unexpected actions. In addition, it can be understood that facing the suspicious person at all times has an effect of pressure on him/her.
+	Moving in between the user and the suspicious person is a way to prevent him/her from taking sudden and unexpected actions. In addition, it can be understood that facing the suspicious person at all times has an effect of pressure on him/her.
 
-Whe have devised an algorithm that would realize these movements. The algorithm is divided into a normal state, where the robot moves alongside the user, and a protection state, where the abovementioned behaviors are executed after detecting the suspicious individual. A tracking system acquires the position information of the user and the suspicious person, and, based on this information, an algorithm determines the point the robot should move to, as well as the direction the robot should face.
+	Whe have devised an algorithm that would realize these movements. The algorithm is divided into a normal state, where the robot moves alongside the user, and a protection state, where the abovementioned behaviors are executed after detecting the suspicious individual. A tracking system acquires the position information of the user and the suspicious person, and, based on this information, an algorithm determines the point the robot should move to, as well as the direction the robot should face.
 
-In addition, we introduce parameters such as the distance to keep from the user, and allow different values between the normal state and the protection state, so that natural motion can be reproduced.
+	In the normal state, the robot should move along with the partner. On the other hand in the protection state, the algorithm makes the robot go to the point on the line that connects the partner and the suspicious person.
 
-Furthermore, in order to test this algorithm on a real robot, a package for ROS (Robot Operating System) was produced, with the goal to run it on Robovie R3, a robot which has sufficient motion capabilities for a real field demontration experiment.
+	In addition, we introduce parameters such as the distance to keep from the user, and allow different values between the normal state and the protection state, so that natural motion can be reproduced.
 
-The developed ROS package was tested on the MORSE simultor, a general-purpose simulator for academic robots, in a virtual environment where the user and suspicious actions were scripted. We could confirm that the executed motions in the simulator were similar to the movie to a certain extent, thus it is considered that the algorithm is able to fairly reproduce human behavior.
+	Furthermore, in order to test this algorithm on a real robot, a package for ROS (Robot Operating System) was produced, with the goal to run it on Robovie R3, a robot which has sufficient motion capabilities for a real field demontration experiment.
 
-Despite this, it remains a future task to verify whether this is the optimal movement for preventing crimes. And if we can quantitatively grasp additional information, such as user's security feeling, alertness of suspicious individuals through questionnaires and interviews, we believe that a better algorithm can be devised.
+	The developed ROS package was tested on the MORSE simultor, a general-purpose simulator for academic robots, in a virtual environment where the user and suspicious actions were scripted. After that, we implemented the algorithm to Robovie-R3. We could confirm that the executed motions in the simulator and the real robot experiment were similar to the movie to a certain extent, thus it is considered that the algorithm is able to fairly reproduce human behavior.
+
+	Despite this, it remains a future task to verify whether this is the optimal movement for preventing crimes. If we can survey and interview users, and we can quantitatively grasp additional information, such as user's security feeling, alertness of suspicious individuals through questionnaires and interviews, we believe that a better algorithm can be devised.
 \end{eabstract}
 
 \tableofcontents
